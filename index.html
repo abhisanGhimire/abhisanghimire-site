@@ -452,46 +452,52 @@
     </div>
   </section>
 
-  <section class="section section-alt" id="toolkit">
+  <section class="section section-alt section-tight" id="toolkit">
     <div class="section-inner">
       <p class="eyebrow">06 &middot; Technical Toolkit</p>
       <h2>Capabilities, by category</h2>
 
-      <div class="toolkit-grid">
-        <div class="toolkit-card">
-          <h3>Web Technologies</h3>
-          <ul class="chip-list">
-            <li>HTML5</li><li>CSS3</li><li>Bootstrap</li><li>jQuery</li><li>Laravel</li><li>React JS</li><li>.NET Framework</li><li>Vue JS</li><li>Vite</li><li>OpenLayers</li><li>Chart.js</li>
+      <div class="toolkit-compact">
+        <div class="tk-row">
+          <h3>AI &amp; Machine Learning</h3>
+          <ul class="tk-items">
+            <li>Machine learning</li><li>Deep learning</li><li>Computer vision</li><li>XGBoost</li><li>SHAP</li><li>OpenCV</li><li>ImageAI</li><li>LLMs &amp; prompting</li><li>AI-assisted development (Claude Code)</li>
           </ul>
         </div>
-        <div class="toolkit-card">
+        <div class="tk-row">
+          <h3>Web</h3>
+          <ul class="tk-items">
+            <li>HTML5</li><li>CSS3</li><li>Tailwind CSS</li><li>Bootstrap</li><li>jQuery</li><li>React</li><li>Next.js</li><li>Vue</li><li>Vite</li><li>Laravel</li><li>.NET Framework</li><li>Flask</li><li>OpenLayers</li><li>Chart.js</li><li>Three.js</li><li>PWAs</li>
+          </ul>
+        </div>
+        <div class="tk-row">
           <h3>Languages</h3>
-          <ul class="chip-list">
-            <li>PHP</li><li>JavaScript</li><li>C</li><li>C++</li><li>Python</li><li>Java</li><li>C#</li><li>Kotlin</li><li>Scratch</li>
+          <ul class="tk-items">
+            <li>Python</li><li>JavaScript</li><li>TypeScript</li><li>PHP</li><li>Java</li><li>C#</li><li>C</li><li>C++</li><li>Kotlin</li><li>Scratch</li>
           </ul>
         </div>
-        <div class="toolkit-card">
+        <div class="tk-row">
           <h3>Databases &amp; Servers</h3>
-          <ul class="chip-list">
-            <li>SQL</li><li>PostgreSQL</li><li>PostGIS</li><li>Apache</li><li>Tomcat</li><li>GeoServer</li>
+          <ul class="tk-items">
+            <li>SQL</li><li>PostgreSQL</li><li>PostGIS</li><li>Apache</li><li>Tomcat</li><li>GeoServer</li><li>Proxmox VE</li>
           </ul>
         </div>
-        <div class="toolkit-card">
+        <div class="tk-row">
           <h3>Research Computing</h3>
-          <ul class="chip-list">
-            <li>Pandas</li><li>Selenium</li><li>BeautifulSoup</li><li>OpenCV</li><li>ImageAI</li><li>Jupyter</li><li>PyCharm</li>
+          <ul class="tk-items">
+            <li>Pandas</li><li>Jupyter</li><li>Selenium</li><li>BeautifulSoup</li><li>PyCharm</li>
           </ul>
         </div>
-        <div class="toolkit-card">
+        <div class="tk-row">
           <h3>Tools &amp; Environments</h3>
-          <ul class="chip-list">
-            <li>Git</li><li>GitHub</li><li>GitLab</li><li>VS Code</li><li>Visual Studio</li><li>Android Studio</li><li>Eclipse</li><li>Windows</li><li>Ubuntu</li><li>CentOS</li><li>macOS</li>
+          <ul class="tk-items">
+            <li>Git</li><li>GitHub</li><li>GitHub Actions</li><li>GitHub Pages</li><li>GitLab</li><li>Cloudflare</li><li>VS Code</li><li>Visual Studio</li><li>Android Studio</li><li>Eclipse</li><li>Windows</li><li>Ubuntu</li><li>CentOS</li><li>macOS</li>
           </ul>
         </div>
-        <div class="toolkit-card">
+        <div class="tk-row">
           <h3>Design &amp; Process</h3>
-          <ul class="chip-list">
-            <li>ER diagrams</li><li>Use cases</li><li>Class diagrams</li><li>Activity diagrams</li><li>Agile Scrum</li><li>Waterfall</li><li>Hybrid SDLC</li>
+          <ul class="tk-items">
+            <li>HCI research</li><li>Learning environment design</li><li>ER diagrams</li><li>Use cases</li><li>Class diagrams</li><li>Activity diagrams</li><li>Agile Scrum</li><li>Waterfall</li><li>Hybrid SDLC</li>
           </ul>
         </div>
       </div>
@@ -537,9 +543,30 @@
       <p class="eyebrow">08 &middot; About</p>
       <h2>A software engineer and educator pursuing doctoral research</h2>
       <div class="about-layout">
-      <figure class="about-photo">
-        <img src="assets/abhisan-ghimire.jpg" width="400" height="400" alt="Portrait of Abhisan Ghimire, wearing glasses, a white shirt and a navy tie">
-      </figure>
+      <aside class="about-aside">
+        <figure class="about-photo">
+          <img src="assets/abhisan-ghimire.jpg" width="400" height="400" alt="Portrait of Abhisan Ghimire, wearing glasses, a white shirt and a navy tie">
+        </figure>
+
+        <div class="about-path">
+          <svg viewBox="0 0 220 100" role="img" aria-label="A path from building software, to teaching, to research">
+            <path class="path-line" d="M14 74C66 74 88 50 112 46S176 26 206 22"/>
+            <circle class="path-node" cx="14" cy="74" r="4"/>
+            <circle class="path-node" cx="112" cy="46" r="4"/>
+            <circle class="path-halo" cx="206" cy="22" r="9"/>
+            <circle class="path-node path-now" cx="206" cy="22" r="4.5"/>
+            <text class="path-label" x="14" y="94">Build</text>
+            <text class="path-label" x="112" y="68" text-anchor="middle">Teach</text>
+            <text class="path-label path-label-now" x="206" y="48" text-anchor="end">Research</text>
+          </svg>
+        </div>
+
+        <dl class="about-facts">
+          <div><dt>Now</dt><dd>Education Coordinator, Boys &amp; Girls Club of Worcester</dd></div>
+          <div><dt>Focus</dt><dd>HCI research, learning environment design</dd></div>
+          <div><dt>Degree</dt><dd>M.S. Computer Science, Clark University</dd></div>
+        </dl>
+      </aside>
       <div class="about-text">
         <p>I'm a software engineer by training and practice, and an educator by current role, and I'm looking to bring both into a PhD. Teaching has shown me, in a way that shipping code alone never did, how people actually learn, adopt, and get stuck on the systems we build, and that gap between what we design and how people really use it is the question I want to study formally.</p>
         <p>I hold an M.S. in Computer Science from Clark University (2023, GPA 3.97/4.00, Alpha Epsilon Lambda Honor Society) and a B.E. in Computer Science from Dr. Ambedkar Institute of Technology (2019). Most of my career has been hands-on software and web development: building GIS-based infrastructure management, COVID-19 monitoring, and disaster-risk assessment systems in Laravel, OpenLayers, GeoServer, and PostgreSQL for a national telecom regulator and public health partners.</p>

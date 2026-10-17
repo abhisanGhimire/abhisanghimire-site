@@ -599,3 +599,58 @@ a.resource-link:hover{ background: var(--accent-tint); }
   .about-layout{ grid-template-columns: 1fr; gap: 36px; }
   .about-photo{ width: 180px; margin-right: 12px; }
 }
+
+/* ==========================================================================
+   Toolkit, compact rows
+   ========================================================================== */
+.section-tight{ padding: 48px 0; }
+.toolkit-compact{ margin-top: 4px; border-top: 1px solid var(--border-soft); }
+.tk-row{
+  display:grid; grid-template-columns: 170px 1fr; gap: 20px; align-items: baseline;
+  padding: 9px 0; border-bottom: 1px solid var(--border-soft);
+}
+.tk-row h3{
+  font-family: var(--font-mono); font-size: 0.74rem; font-weight: 500;
+  text-transform: uppercase; letter-spacing: .06em; color: var(--text-faint); margin: 0;
+}
+.tk-items{ display:flex; flex-wrap:wrap; row-gap: 3px; }
+.tk-items li{ font-size: 0.86rem; color: var(--text-dim); line-height: 1.45; }
+.tk-items li:not(:last-child)::after{ content: "\00b7"; margin: 0 .55em; color: var(--text-faint); }
+@media (max-width: 720px){
+  .section-tight{ padding: 40px 0; }
+  .tk-row{ grid-template-columns: 1fr; gap: 4px; padding: 10px 0; }
+}
+
+/* ==========================================================================
+   About: sidebar under the portrait (path doodle + quick facts)
+   ========================================================================== */
+.about-aside{ display:flex; flex-direction:column; gap: 30px; }
+.about-path{ border-top: 1px solid var(--border-soft); padding-top: 22px; }
+.about-path svg{ display:block; width:100%; height:auto; overflow:visible; }
+.path-line{ fill:none; stroke: var(--text-faint); stroke-width: 1.4; stroke-linecap: round; opacity: .75; }
+.path-node{ fill: var(--bg-elevated); stroke: var(--text-faint); stroke-width: 1.4; }
+.path-now{ fill: var(--accent); stroke: var(--accent); }
+.path-halo{ fill:none; stroke: var(--accent-dim); stroke-width: 1; opacity: .8; }
+.path-label{
+  font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .08em;
+  text-transform: uppercase; fill: var(--text-faint);
+}
+.path-label-now{ fill: var(--accent); }
+
+.about-facts{ display:grid; gap: 14px; margin: 0; }
+.about-facts div{ display:grid; gap: 3px; }
+.about-facts dt{
+  font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--text-faint);
+}
+.about-facts dd{ margin: 0; font-size: 0.88rem; line-height: 1.45; color: var(--text-dim); }
+
+@media (max-width: 860px){
+  .about-aside{ flex-direction: row; flex-wrap: wrap; align-items: flex-start; gap: 28px 36px; }
+  .about-aside .about-photo{ flex: none; }
+  .about-path{ flex: 1 1 220px; max-width: 300px; border-top: 0; padding-top: 0; }
+  .about-facts{ flex: 1 1 100%; }
+}
+@media (max-width: 560px){
+  .about-path{ display: none; }
+}
