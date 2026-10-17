@@ -160,14 +160,13 @@ h3{
 .brand-logo{ display:block; width:36px; height:36px; flex:none; }
 .brand-logo .logo-tile{ fill: var(--bg); stroke: var(--border); stroke-width: 2; transition: stroke .25s var(--ease); }
 .brand-logo .logo-art{ fill:none; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
-.brand-logo .draw-a, .brand-logo .draw-b{ stroke: var(--text); }
+.brand-logo .draw-ab{ stroke: var(--text); }
 .brand-logo .draw-link{ stroke: var(--accent); transition: stroke .25s var(--ease); }
 .brand:hover .logo-tile{ stroke: var(--accent-dim); }
 .brand:hover .draw-link{ stroke: #D9774F; }
 /* the finished logo is the default state; the animation only plays the draw-in on load */
-.brand-logo .draw{ stroke-dasharray: 1 2; animation: ab-draw .8s var(--ease) backwards; }
-.brand-logo .draw-b{ animation-delay: .2s; }
-.brand-logo .draw-link{ animation-delay: .65s; animation-duration: .35s; }
+.brand-logo .draw{ stroke-dasharray: 1 2; animation: ab-draw 1.1s var(--ease) backwards; }
+.brand-logo .draw-link{ animation-delay: .9s; animation-duration: .35s; }
 @keyframes ab-draw{ from{ stroke-dashoffset: 1; } to{ stroke-dashoffset: 0; } }
 @media (prefers-reduced-motion: reduce){
   .brand-logo .draw{ animation: none; }
