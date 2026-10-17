@@ -1,0 +1,27 @@
+---
+title: GitHub
+description: Projects on GitHub by Abhisan Ghimire: live demos and open repositories with links to the code.
+path: /github/
+---
+<section class="section" id="github">
+    <div class="section-inner">
+      <p class="eyebrow">Work</p>
+      <h1 class="page-title">Projects on GitHub</h1>
+      <p class="gh-intro">Live demos run straight from GitHub Pages, and every repository links to its source code. Everything here is pulled from <a href="https://github.com/abhisanGhimire" target="_blank" rel="noopener">github.com/abhisanGhimire</a>.</p>
+
+      <div class="gh-controls">
+        <div class="gh-tabs" role="tablist" aria-label="Project view">
+          <button type="button" role="tab" class="gh-tab" id="gh-tab-live" data-view="live" aria-selected="true">Live demos <span class="gh-count" id="gh-count-live"></span></button>
+          <button type="button" role="tab" class="gh-tab" id="gh-tab-all" data-view="all" aria-selected="false">All repositories <span class="gh-count" id="gh-count-all"></span></button>
+        </div>
+        <label class="gh-forks"><input type="checkbox" id="gh-show-forks"> Include forks</label>
+      </div>
+
+      <div class="project-grid gh-grid" id="gh-grid" aria-live="polite">
+        <p class="gh-status">Loading projects&hellip;</p>
+      </div>
+      <div class="gh-more-wrap"><button type="button" class="btn btn-outline btn-small" id="gh-more" hidden>Show all repositories</button></div>
+
+      <noscript><p class="gh-intro">Turn on JavaScript to browse the project list, or visit <a href="https://github.com/abhisanGhimire?tab=repositories" rel="noopener">my GitHub profile</a>.</p></noscript>
+    </div>
+  </section>

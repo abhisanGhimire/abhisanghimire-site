@@ -1,18 +1,43 @@
 /* ==========================================================================
-   Abhisan Ghimire — Portfolio
-   Site behavior: mobile nav, active-link tracking, scroll-reveal, footer year
+   Abhisan Ghimire: Portfolio
+   Site behavior: menu and submenus, old-link redirects, scroll-reveal,
+   footer year, GitHub projects
    ========================================================================== */
 (function () {
   "use strict";
 
+  // the menu collapses into the button at this width (keep in sync with styles.css)
+  var MOBILE_NAV_MAX = 860;
+
+  // runs straight away: old one-page links (#research, #publications, ...) go to their new pages
+  initLegacyAnchors();
+  window.addEventListener("hashchange", initLegacyAnchors);
+
   document.addEventListener("DOMContentLoaded", function () {
     setFooterYear();
-    initMobileNav();
-    initActiveNavTracking();
+    initNav();
     initScrollReveal();
     initHeaderScrollState();
     initGitHubProjects();
   });
+
+  /* ============ Old one-page links ============ */
+  function initLegacyAnchors() {
+    if (location.pathname !== "/" || !location.hash) return;
+    var map = {
+      "#research": "/research/",
+      "#publications": "/publications/",
+      "#experience": "/experience/",
+      "#projects": "/projects/",
+      "#github": "/github/",
+      "#toolkit": "/toolkit/",
+      "#education": "/cv/",
+      "#about": "/about/",
+      "#contact": "/contact/"
+    };
+    var target = map[location.hash];
+    if (target) location.replace(target);
+  }
 
   /* ============ Footer year ============ */
   function setFooterYear() {
@@ -20,87 +45,75 @@
     if (yearEl) yearEl.textContent = new Date().getFullYear();
   }
 
-  /* ============ Mobile nav toggle ============ */
-  function initMobileNav() {
+  /* ============ Menu: submenus and the mobile panel ============ */
+  function initNav() {
     var toggle = document.getElementById("nav-toggle");
     var nav = document.getElementById("main-nav");
     if (!toggle || !nav) return;
+    var parents = Array.prototype.slice.call(nav.querySelectorAll(".nav-parent"));
+
+    function isMobile() { return window.innerWidth <= MOBILE_NAV_MAX; }
+
+    function closeSubs(except) {
+      parents.forEach(function (btn) {
+        if (btn === except) return;
+        btn.setAttribute("aria-expanded", "false");
+        btn.parentNode.classList.remove("open");
+      });
+    }
 
     function closeNav() {
       toggle.setAttribute("aria-expanded", "false");
       nav.classList.remove("open");
+      document.body.classList.remove("nav-open");
+      closeSubs(null);
     }
 
     function openNav() {
       toggle.setAttribute("aria-expanded", "true");
       nav.classList.add("open");
+      document.body.classList.add("nav-open");
     }
 
     toggle.addEventListener("click", function () {
-      var expanded = toggle.getAttribute("aria-expanded") === "true";
-      if (expanded) {
-        closeNav();
-      } else {
-        openNav();
-      }
+      if (toggle.getAttribute("aria-expanded") === "true") closeNav();
+      else openNav();
     });
 
-    // close the mobile menu whenever a nav link is used
+    // a group button opens or closes its own submenu
+    parents.forEach(function (btn) {
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var open = btn.getAttribute("aria-expanded") === "true";
+        closeSubs(btn);
+        btn.setAttribute("aria-expanded", String(!open));
+        btn.parentNode.classList.toggle("open", !open);
+      });
+    });
+
+    // choosing a page closes everything
     nav.querySelectorAll("a[data-nav]").forEach(function (link) {
       link.addEventListener("click", closeNav);
     });
 
-    // close on Escape
+    // clicking anywhere else closes an open submenu
+    document.addEventListener("click", function (e) {
+      if (!nav.contains(e.target)) closeSubs(null);
+    });
+
+    // Escape closes the menu and returns focus to the group button on desktop
     document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape") closeNav();
+      if (e.key !== "Escape") return;
+      var openBtn = parents.filter(function (b) { return b.getAttribute("aria-expanded") === "true"; })[0];
+      closeNav();
+      if (openBtn && !isMobile()) openBtn.focus();
     });
 
-    // close if the viewport grows back to desktop size
+    // growing back to desktop size resets the mobile panel
     window.addEventListener("resize", function () {
-      if (window.innerWidth > 1150) closeNav();
+      if (!isMobile()) closeNav();
     });
   }
-
-  /* ============ Active nav-link highlighting on scroll ============ */
-  function initActiveNavTracking() {
-    var navLinks = Array.prototype.slice.call(document.querySelectorAll('a[data-nav]'));
-    if (!navLinks.length || !("IntersectionObserver" in window)) return;
-
-    var sections = navLinks
-      .map(function (link) {
-        var id = link.getAttribute("href");
-        if (!id || id.charAt(0) !== "#") return null;
-        var el = document.querySelector(id);
-        return el ? { id: id, el: el, link: link } : null;
-      })
-      .filter(Boolean);
-
-    if (!sections.length) return;
-
-    var header = document.getElementById("site-header");
-    var headerHeight = header ? header.offsetHeight : 68;
-
-    var observer = new IntersectionObserver(
-      function (entries) {
-        entries.forEach(function (entry) {
-          var match = sections.find(function (s) { return s.el === entry.target; });
-          if (!match) return;
-          if (entry.isIntersecting) {
-            navLinks.forEach(function (l) { l.classList.remove("active"); });
-            match.link.classList.add("active");
-          }
-        });
-      },
-      {
-        root: null,
-        rootMargin: "-" + (headerHeight + 8) + "px 0px -55% 0px",
-        threshold: 0,
-      }
-    );
-
-    sections.forEach(function (s) { observer.observe(s.el); });
-  }
-
   /* ============ Scroll-reveal fade-ins ============ */
   function initScrollReveal() {
     var reduceMotion =
@@ -161,8 +174,8 @@
     var USER = "abhisanGhimire";
     var PAGES_BASE = "https://abhisanghimire.github.io/";
     var API_URL = "https://api.github.com/users/" + USER + "/repos?per_page=100&sort=pushed";
-    var FALLBACK_URL = "data/github-repos.json";
-    var DESCRIPTIONS_URL = "data/project-descriptions.json";
+    var FALLBACK_URL = "/data/github-repos.json";
+    var DESCRIPTIONS_URL = "/data/project-descriptions.json";
     // repos that are not shown: this site, the profile README repo, a GitHub training repo,
     // projects the owner chose to hide, and empty placeholder repos
     var HIDDEN = [
