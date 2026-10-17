@@ -136,7 +136,7 @@ function build() {
     const wantsHero = meta.hero === 'true';
 
     const scripts = (wantsHero
-      ? '<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>\n<script src="/hero3d.js?v=' + VERSION + '"></script>\n'
+      ? '<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>\n<script src="/assets/3d/GLTFLoader.js?v=' + VERSION + '"></script>\n<script src="/hero3d.js?v=' + VERSION + '"></script>\n'
       : '') + '<script src="/script.js?v=' + VERSION + '"></script>';
 
     const html = fill(layout, {

@@ -246,6 +246,7 @@ body.nav-open{ overflow: hidden; }
 
 .hero-figure{ position:relative; }
 .hero3d-wrap{
+  background: radial-gradient(circle at 50% 52%, rgba(196,98,62,.20), rgba(196,98,62,.06) 45%, transparent 68%);
   width:100%; aspect-ratio: 1 / 1; max-height: 420px;
   overflow:hidden;
   position: relative;
