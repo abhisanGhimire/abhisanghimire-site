@@ -16,7 +16,7 @@
 
   var scene = new THREE.Scene();
   var camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
-  camera.position.set(0, 5.4, 9.6);
+  camera.position.set(0, 5.4, 10.0);
   camera.lookAt(0, -0.1, 0);
 
   var renderer;
@@ -129,7 +129,7 @@
   var TR = VARIANTS.map(function (v) { return pageTex(v, "right"); });
   var TL = VARIANTS.map(function (v) { return pageTex(v, "left"); });
   var TB = TL.map(mirrored);
-  var curR = 3, curL = 1;
+  var curR = 2, curL = 1;
   function pick(not) { var v; do { v = Math.floor(Math.random() * VARIANTS.length); } while (v === not); return v; }
 
   var book = new THREE.Group();
@@ -224,11 +224,88 @@
   shadow.position.y = BASE - CT - 0.02;
   book.add(shadow);
 
-  book.scale.setScalar(1.36);
+  book.scale.setScalar(1.2);
   book.position.y = 0.1;
 
+  // ---------- academia: a stack of closed books topped with a mortarboard ----------
+  function closedBook(w, h, d, color) {
+    var g = new THREE.Group();
+    var cover = new THREE.MeshStandardMaterial({ color: color, roughness: 0.6, metalness: 0.05 });
+    var paper = new THREE.MeshLambertMaterial({ color: 0xe0d6c2 });
+    var pages = new THREE.Mesh(new THREE.BoxGeometry(w - 0.05, h - 0.07, d - 0.03), paper);
+    pages.position.x = 0.02;
+    g.add(pages);
+    [1, -1].forEach(function (sgn) {
+      var b = new THREE.Mesh(new THREE.BoxGeometry(w, 0.035, d), cover);
+      b.position.y = sgn * (h / 2 - 0.0175);
+      g.add(b);
+    });
+    var sp = new THREE.Mesh(new THREE.BoxGeometry(0.04, h, d), cover);
+    sp.position.x = -w / 2 + 0.02;
+    g.add(sp);
+    // gold bands on the spine
+    var gold = new THREE.MeshStandardMaterial({ color: 0xd9a54a, roughness: 0.4, metalness: 0.4 });
+    [-0.28, 0.28].forEach(function (zz) {
+      var band = new THREE.Mesh(new THREE.BoxGeometry(0.045, h * 0.8, 0.03), gold);
+      band.position.set(-w / 2 + 0.02, 0, zz * d);
+      g.add(band);
+    });
+    return g;
+  }
+  var stack = new THREE.Group();
+  var specs = [
+    { w: 1.5, h: 0.24, d: 1.1, c: 0x8a3f26, rot: 0.1, dx: 0.0 },
+    { w: 1.35, h: 0.2, d: 1.0, c: 0x3f5a4c, rot: -0.18, dx: 0.06 },
+    { w: 1.25, h: 0.2, d: 0.95, c: 0x2f3b52, rot: 0.22, dx: -0.04 }
+  ];
+  var yy = 0;
+  specs.forEach(function (sp) {
+    var b = closedBook(sp.w, sp.h, sp.d, sp.c);
+    b.position.set(sp.dx, yy + sp.h / 2, 0);
+    b.rotation.y = sp.rot;
+    stack.add(b);
+    yy += sp.h;
+  });
+
+  // mortarboard
+  var cap = new THREE.Group();
+  var black = new THREE.MeshStandardMaterial({ color: 0x1a1d22, roughness: 0.75, metalness: 0.05 });
+  var board = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.05, 1.15), black);
+  board.position.y = 0.26;
+  cap.add(board);
+  var crown = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.4, 0.26, 28), black);
+  crown.position.y = 0.12;
+  cap.add(crown);
+  var knob = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.03, 16), new THREE.MeshStandardMaterial({ color: 0xd9a54a, roughness: 0.4, metalness: 0.4 }));
+  knob.position.y = 0.305;
+  cap.add(knob);
+  var cordPts = [
+    new THREE.Vector3(0, 0.31, 0), new THREE.Vector3(0.3, 0.295, 0.12), new THREE.Vector3(0.52, 0.29, 0.38),
+    new THREE.Vector3(0.575, 0.27, 0.575), new THREE.Vector3(0.58, 0.1, 0.6)
+  ];
+  var goldMat = new THREE.MeshStandardMaterial({ color: 0xd9a54a, roughness: 0.45, metalness: 0.35 });
+  cap.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(cordPts), 24, 0.012, 8, false), goldMat));
+  var tassel = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.06, 0.2, 12), goldMat);
+  tassel.position.set(0.58, 0.0, 0.6);
+  cap.add(tassel);
+  cap.position.y = yy - 0.04;
+  cap.rotation.y = 0.55;
+  cap.rotation.z = 0.04;
+  stack.add(cap);
+
+  // contact shadow under the stack
+  var stackShadow = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 2.8), new THREE.MeshBasicMaterial({ map: shTex, transparent: true, depthWrite: false }));
+  stackShadow.rotation.x = -Math.PI / 2;
+  stackShadow.position.y = 0.01;
+  stack.add(stackShadow);
+
+  stack.scale.setScalar(1.0);
+  stack.position.set(2.55, -0.28, -0.6);
+  pivot.add(stack);
+  pivot.position.x = -0.95;
+
   // ---------- turning pages: several at once, both directions, each with its own design ----------
-  var SLOTS = 6;
+  var SLOTS = 5;
   var flips = [];
   for (var si = 0; si < SLOTS; si++) (function (i) {
     var geo = pageGeometry();
@@ -246,27 +323,15 @@
 
   function startFlip(f) {
     f.active = true; f.t = 0;
-    f.dur = 1.9 + Math.random() * 1.5;
+    f.dur = 2.2 + Math.random() * 1.2;
     f.lag = 0.8 + Math.random() * 0.8;
-    f.dir = Math.random() < 0.8 ? 1 : -1;            // mostly forward, sometimes back
-    var nl = pick(curL), nr = pick(curR);
-    if (f.dir === 1) {
-      f.front.material.map = TR[curR];                // what is on the right lifts away
-      f.back.material.map = TB[nl];                   // and shows this on the left once it lands
-      f.endL = nl; f.endR = -1;
-      curR = nr; rightPage.material.map = TR[nr];     // a new page is revealed under it
-    } else {
-      f.back.material.map = TB[curL];
-      f.front.material.map = TR[nr];
-      f.endR = nr; f.endL = -1;
-      curL = nl; leftPage.material.map = TL[nl];
-    }
+    f.dir = Math.random() < 0.85 ? 1 : -1;            // mostly forward, sometimes back
+    f.front.material.map = TR[curR];
+    f.back.material.map = TB[curL];
     f.front.material.needsUpdate = true; f.back.material.needsUpdate = true;
   }
   function endFlip(f) {
     f.active = false; f.grp.visible = false;
-    if (f.endL >= 0) { curL = f.endL; leftPage.material.map = TL[curL]; }
-    if (f.endR >= 0) { curR = f.endR; rightPage.material.map = TR[curR]; }
   }
 
   function bend(f, e) {
@@ -309,7 +374,7 @@
     spawn -= dt;
     if (spawn <= 0) {
       for (var q = 0; q < flips.length; q++) if (!flips[q].active) { startFlip(flips[q]); break; }
-      spawn = 0.55 + Math.random() * 0.9;
+      spawn = 0.7 + Math.random() * 1.1;
     }
     flips.forEach(function (f) {
       if (!f.active) return;
