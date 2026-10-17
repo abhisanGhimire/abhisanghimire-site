@@ -1,456 +1,223 @@
 /* ==========================================================================
-   Hero 3D: a dotted globe with country borders. India, Nepal, China, the
-   Philippines and the United States are lit in the site's rust colour.
-   Land and borders come from Natural Earth (public domain).
-   Drag to spin. Needs three.js (r128) and data/globe-data.js (window.GLOBE_DATA).
+   Hero 3D: my initials, "AB", built from dots with depth, held in a small
+   orrery. Three orbits stand for the three things I do: engineer (sage),
+   educator (light rust), researcher (cream). Drag to turn it; it settles
+   back to face front. Needs three.js (r128).
    ========================================================================== */
 (function () {
   "use strict";
 
   var canvas = document.getElementById("hero3d");
   var wrap = document.getElementById("hero3d-wrap");
-  var data = window.GLOBE_DATA;
-  if (!canvas || !wrap || typeof THREE === "undefined" || !data) return;
+  if (!canvas || !wrap || typeof THREE === "undefined") return;
 
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  var R = 2;                  // globe radius
-  var VIEW_LON = 102;         // resting view: Asia, where four of the five countries are
-  var REST_TILT = 0.32;       // north pole tipped toward the viewer
-  var DEG = Math.PI / 180;
-
-  // dot spacing (degrees) used to fill each highlighted country; small countries need finer dots
-  var FILL_STEP = { "India": 1.0, "Nepal": 0.34, "China": 1.05, "Philippines": 0.42, "United States of America": 1.05 };
+  var RUST = 0xc4623e, LIGHT = 0xf2a07c, SAGE = 0x7c9385, CREAM = 0xefe6d6;
 
   var scene = new THREE.Scene();
   var camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
-  camera.position.set(0, 0, 9.0);
+  camera.position.set(0, 0, 11.6);
 
   var renderer;
   try {
     renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
   } catch (e) {
-    return; // no WebGL: the page reads fine without the globe
+    wrap.classList.add("no-webgl");
+    return;
   }
   renderer.setClearColor(0x000000, 0);
 
-  var dotUniformSets = [];
-  function size() {
-    var w = wrap.clientWidth || 360;
-    var h = wrap.clientHeight || w;
-    var pr = Math.min(window.devicePixelRatio || 1, 2);
-    renderer.setPixelRatio(pr);
+  var root = new THREE.Group();
+  scene.add(root);
+
+  // soft round dot sprite
+  var spriteCanvas = document.createElement("canvas");
+  spriteCanvas.width = spriteCanvas.height = 64;
+  var sctx = spriteCanvas.getContext("2d");
+  var grad = sctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0, "rgba(255,255,255,1)");
+  grad.addColorStop(0.55, "rgba(255,255,255,0.95)");
+  grad.addColorStop(1, "rgba(255,255,255,0)");
+  sctx.fillStyle = grad;
+  sctx.fillRect(0, 0, 64, 64);
+  var sprite = new THREE.CanvasTexture(spriteCanvas);
+
+  function dotMaterial(color, size, opacity) {
+    return new THREE.PointsMaterial({
+      color: color, size: size, map: sprite, transparent: true, opacity: opacity,
+      depthWrite: false, sizeAttenuation: true, blending: THREE.AdditiveBlending
+    });
+  }
+  function pointsFrom(arr, mat) {
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(arr, 3));
+    return new THREE.Points(geo, mat);
+  }
+
+  // ---------- the "AB" monogram: sample a bold glyph into dots, stacked in depth ----------
+  var gw = 260, gh = 160;
+  var gc = document.createElement("canvas");
+  gc.width = gw; gc.height = gh;
+  var g = gc.getContext("2d");
+  g.fillStyle = "#000";
+  g.fillRect(0, 0, gw, gh);
+  g.fillStyle = "#fff";
+  g.font = "800 150px Georgia, 'Times New Roman', serif";
+  g.textAlign = "center";
+  g.textBaseline = "alphabetic";
+  g.fillText("AB", gw / 2, gh * 0.82);
+  var px = g.getImageData(0, 0, gw, gh).data;
+
+  var STEP = 4, LAYERS = 7, DEPTH = 0.62;
+  var minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9, x, y, l;
+  for (y = 0; y < gh; y += STEP) {
+    for (x = 0; x < gw; x += STEP) {
+      if (px[(y * gw + x) * 4] > 128) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  var cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+  var fit = 4.5 / (maxX - minX);
+  var body = [], faces = [];
+  for (y = 0; y < gh; y += STEP) {
+    for (x = 0; x < gw; x += STEP) {
+      if (px[(y * gw + x) * 4] <= 128) continue;
+      for (l = 0; l < LAYERS; l++) {
+        var z = (l / (LAYERS - 1) - 0.5) * DEPTH;
+        var target = (l === 0 || l === LAYERS - 1) ? faces : body;
+        target.push((x - cx) * fit + (Math.random() - 0.5) * 0.015, -(y - cy) * fit + (Math.random() - 0.5) * 0.015, z);
+      }
+    }
+  }
+  var monogram = new THREE.Group();
+  monogram.add(pointsFrom(body, dotMaterial(RUST, 0.1, 0.85)));
+  monogram.add(pointsFrom(faces, dotMaterial(LIGHT, 0.115, 1)));
+  root.add(monogram);
+
+  // ---------- orbits: engineer, educator, researcher ----------
+  var orbits = [
+    { r: 3.05, tilt: 1.15, spin: 0.0, speed: 0.55, color: SAGE },
+    { r: 3.45, tilt: -0.55, spin: 1.9, speed: -0.38, color: LIGHT },
+    { r: 3.85, tilt: 0.2, spin: 3.7, speed: 0.27, color: CREAM }
+  ];
+  var beads = [];
+  orbits.forEach(function (o, i) {
+    var holder = new THREE.Group();
+    holder.rotation.x = o.tilt;
+    holder.rotation.z = o.spin;
+    var ring = [], N = 160;
+    for (var k = 0; k < N; k++) {
+      var a = (k / N) * Math.PI * 2;
+      ring.push(Math.cos(a) * o.r, Math.sin(a) * o.r, 0);
+    }
+    holder.add(pointsFrom(ring, dotMaterial(o.color, 0.07, 1)));
+
+    var bead = new THREE.Group();
+    bead.add(new THREE.Mesh(new THREE.SphereGeometry(0.075, 20, 20), new THREE.MeshBasicMaterial({ color: o.color })));
+    var halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: sprite, color: o.color, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
+    halo.scale.set(0.55, 0.55, 1);
+    bead.add(halo);
+    holder.add(bead);
+    beads.push({ obj: bead, o: o, phase: i * 2.1 });
+    root.add(holder);
+  });
+
+  // ---------- faint dust for depth ----------
+  var dust = [];
+  for (var d = 0; d < 260; d++) {
+    var u = Math.random() * 2 - 1, t = Math.random() * Math.PI * 2, rr = 4.6 + Math.random() * 1.8;
+    var s = Math.sqrt(1 - u * u);
+    dust.push(rr * s * Math.cos(t), rr * u * 0.8, rr * s * Math.sin(t));
+  }
+  var dustPts = pointsFrom(dust, dotMaterial(SAGE, 0.035, 0.35));
+  scene.add(dustPts);
+
+  // ---------- sizing ----------
+  function resize() {
+    var w = wrap.clientWidth || 400, h = wrap.clientHeight || w;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
-    dotUniformSets.forEach(function (u) { u.uPixelRatio.value = pr * (h / 420); });
-    if (reduceMotion) renderOnce();
   }
+  resize();
+  window.addEventListener("resize", resize);
 
-  // ---- helpers ----
-  function latLonToVec(lat, lon, r) {
-    var phi = lat * DEG, lam = lon * DEG;
-    return new THREE.Vector3(
-      r * Math.cos(phi) * Math.sin(lam),
-      r * Math.sin(phi),
-      r * Math.cos(phi) * Math.cos(lam)
-    );
-  }
-  function mulberry32(a) {
-    return function () {
-      a |= 0; a = (a + 0x6D2B79F5) | 0;
-      var t = Math.imul(a ^ (a >>> 15), 1 | a);
-      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-  }
-  var rand = mulberry32(11);
-
-  // land mask (1 degree cells, bit-packed, top row = lat 89.5)
-  var bin = atob(data.land);
-  var bits = new Uint8Array(bin.length);
-  for (var bi = 0; bi < bin.length; bi++) bits[bi] = bin.charCodeAt(bi);
-  function isLand(lat, lon) {
-    var col = Math.floor(lon + 180), row = Math.floor(90 - lat);
-    if (col < 0) col = 0; if (col >= data.landW) col = data.landW - 1;
-    if (row < 0) row = 0; if (row >= data.landH) row = data.landH - 1;
-    var idx = row * data.landW + col;
-    return (bits[idx >> 3] >> (idx & 7)) & 1;
-  }
-
-  // border arcs: delta-encoded integers -> [lon, lat] points
-  var arcs = data.arcs.map(function (flat) {
-    var pts = [], x = 0, y = 0;
-    for (var i = 0; i < flat.length; i += 2) {
-      if (i === 0) { x = flat[0]; y = flat[1]; } else { x += flat[i]; y += flat[i + 1]; }
-      pts.push([x / data.q, y / data.q]);
-    }
-    return pts;
+  // ---------- interaction: drag to turn, then settle back to face front ----------
+  var dragX = 0, dragY = 0, velX = 0, velY = 0, dragging = false, lastX = 0, lastY = 0, hoverX = 0, hoverY = 0;
+  wrap.addEventListener("pointerdown", function (e) {
+    dragging = true; lastX = e.clientX; lastY = e.clientY; velX = velY = 0;
+    wrap.classList.add("is-dragging");
+    try { wrap.setPointerCapture(e.pointerId); } catch (err) {}
   });
-  function ringFromArcs(list) {
-    var pts = [];
-    list.forEach(function (idx) {
-      var a = idx >= 0 ? arcs[idx] : arcs[~idx].slice().reverse();
-      for (var k = pts.length ? 1 : 0; k < a.length; k++) pts.push(a[k]);
-    });
-    return pts;
-  }
-
-  // the highlighted countries as polygons (with bounding boxes for quick tests)
-  var polys = [];
-  Object.keys(data.countries).forEach(function (name) {
-    data.countries[name].forEach(function (list) {
-      var ring = ringFromArcs(list);
-      var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
-      ring.forEach(function (p) {
-        if (p[0] < x0) x0 = p[0]; if (p[0] > x1) x1 = p[0];
-        if (p[1] < y0) y0 = p[1]; if (p[1] > y1) y1 = p[1];
-      });
-      polys.push({ name: name, ring: ring, box: [x0, y0, x1, y1] });
-    });
+  wrap.addEventListener("pointermove", function (e) {
+    if (dragging) {
+      var dx = e.clientX - lastX, dy = e.clientY - lastY;
+      lastX = e.clientX; lastY = e.clientY;
+      velY = dx * 0.006; velX = dy * 0.006;
+      dragY += velY;
+      dragX = Math.max(-1.0, Math.min(1.0, dragX + velX));
+    } else if (e.pointerType === "mouse") {
+      var r = wrap.getBoundingClientRect();
+      hoverY = ((e.clientX - r.left) / r.width - 0.5) * 0.35;
+      hoverX = ((e.clientY - r.top) / r.height - 0.5) * 0.25;
+    }
   });
-  function inRing(lon, lat, ring) {
-    var inside = false;
-    for (var i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-      var xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1];
-      if ((yi > lat) !== (yj > lat) && lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) inside = !inside;
-    }
-    return inside;
-  }
-  function inHighlighted(lon, lat) {
-    for (var i = 0; i < polys.length; i++) {
-      var b = polys[i].box;
-      if (lon < b[0] || lon > b[2] || lat < b[1] || lat > b[3]) continue;
-      if (inRing(lon, lat, polys[i].ring)) return true;
-    }
-    return false;
-  }
+  function end() { dragging = false; wrap.classList.remove("is-dragging"); }
+  wrap.addEventListener("pointerup", end);
+  wrap.addEventListener("pointercancel", end);
+  wrap.addEventListener("pointerleave", function () { hoverX = hoverY = 0; });
 
-  // ---- everything that spins lives in this group ----
-  var globe = new THREE.Group();
-  scene.add(globe);
+  // ---------- render ----------
+  var clock = new THREE.Clock();
+  var visible = true, raf = 0, time = 0;
 
-  // body: dark sphere with soft shading so it reads as a solid
-  globe.add(new THREE.Mesh(
-    new THREE.SphereGeometry(R * 0.996, 64, 48),
-    new THREE.ShaderMaterial({
-      vertexShader: [
-        "varying vec3 vN;",
-        "void main(){ vN = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }"
-      ].join("\n"),
-      fragmentShader: [
-        "varying vec3 vN;",
-        "void main(){",
-        "  float l = max(dot(vN, normalize(vec3(-0.45, 0.55, 0.7))), 0.0);",
-        "  vec3 base = vec3(0.070, 0.085, 0.100);",
-        "  vec3 col = base * (0.55 + 0.75 * l) + vec3(0.020, 0.030, 0.034) * pow(1.0 - vN.z, 2.0);",
-        "  gl_FragColor = vec4(col, 1.0);",
-        "}"
-      ].join("\n")
-    })
-  ));
-
-  // graticule: faint meridians and parallels
-  (function () {
-    var pos = [];
-    var seg = 96;
-    function ring(fn) {
-      for (var i = 0; i < seg; i++) {
-        var a = fn(i / seg), b = fn((i + 1) / seg);
-        pos.push(a.x, a.y, a.z, b.x, b.y, b.z);
+  function frame(dt) {
+    time += dt;
+    if (!dragging) {
+      dragY += velY; velY *= 0.94;
+      dragX += velX; velX *= 0.94;
+      if (Math.abs(velY) < 0.002) {
+        var home = Math.round(dragY / (Math.PI * 2)) * Math.PI * 2;
+        dragY += (home - dragY) * Math.min(1, dt * 1.4);
       }
+      dragX += (0 - dragX) * Math.min(1, dt * 1.4);
     }
-    var lat, lon;
-    for (lat = -60; lat <= 60; lat += 30) {
-      (function (la) { ring(function (t) { return latLonToVec(la, t * 360 - 180, R * 1.001); }); })(lat);
-    }
-    for (lon = 0; lon < 180; lon += 30) {
-      (function (lo) { ring(function (t) { return latLonToVec(t * 360 - 180, lo, R * 1.001); }); })(lon);
-    }
-    var g = new THREE.BufferGeometry();
-    g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-    globe.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0x232a2f, transparent: true, opacity: 0.5 })));
-  })();
+    var sway = reduceMotion ? 0 : Math.sin(time * 0.45) * 0.38;
+    var bob = reduceMotion ? 0 : Math.sin(time * 0.6) * 0.04;
+    root.rotation.y = sway + dragY + hoverY;
+    root.rotation.x = -0.12 + dragX + hoverX + bob;
+    dustPts.rotation.y = time * 0.02;
 
-  // ---- dots (round, fade toward the limb) ----
-  function dotMaterial(color, alpha, sizePx) {
-    var uniforms = {
-      uColor: { value: new THREE.Color(color) },
-      uAlpha: { value: alpha },
-      uSize: { value: sizePx },
-      uPixelRatio: { value: 1 }
-    };
-    dotUniformSets.push(uniforms);
-    return new THREE.ShaderMaterial({
-      uniforms: uniforms,
-      transparent: true,
-      depthWrite: false,
-      vertexShader: [
-        "uniform float uSize; uniform float uPixelRatio;",
-        "attribute float aScale;",
-        "varying float vFacing;",
-        "void main(){",
-        "  vec4 mv = modelViewMatrix * vec4(position, 1.0);",
-        "  vec3 n = normalize(normalMatrix * normalize(position));",
-        "  vFacing = dot(n, normalize(-mv.xyz));",
-        "  gl_PointSize = uSize * aScale * uPixelRatio * (9.0 / -mv.z);",
-        "  gl_Position = projectionMatrix * mv;",
-        "}"
-      ].join("\n"),
-      fragmentShader: [
-        "uniform vec3 uColor; uniform float uAlpha;",
-        "varying float vFacing;",
-        "void main(){",
-        "  float d = length(gl_PointCoord - 0.5);",
-        "  float a = smoothstep(0.5, 0.32, d);",
-        "  float fade = smoothstep(0.0, 0.35, vFacing);",
-        "  gl_FragColor = vec4(uColor * (0.62 + 0.45 * vFacing), a * fade * uAlpha);",
-        "}"
-      ].join("\n")
+    beads.forEach(function (b) {
+      var a = b.phase + time * b.o.speed;
+      b.obj.position.set(Math.cos(a) * b.o.r, Math.sin(a) * b.o.r, 0);
     });
-  }
-  function pointsFrom(positions, scales, material) {
-    var g = new THREE.BufferGeometry();
-    g.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-    g.setAttribute("aScale", new THREE.Float32BufferAttribute(scales, 1));
-    return new THREE.Points(g, material);
-  }
-
-  // continents: an even spread of points on the sphere, kept where the land mask says land
-  (function () {
-    var N = 18000, golden = Math.PI * (3 - Math.sqrt(5));
-    var pos = [], sc = [];
-    for (var i = 0; i < N; i++) {
-      var y = 1 - (2 * (i + 0.5)) / N;
-      var r = Math.sqrt(1 - y * y);
-      var th = golden * i;
-      var x = Math.cos(th) * r, z = Math.sin(th) * r;
-      var lat = Math.asin(y) / DEG, lon = Math.atan2(x, z) / DEG;
-      if (lat < -58 || !isLand(lat, lon) || inHighlighted(lon, lat)) continue; // no dots on Antarctica
-      var k = R * 1.002;
-      pos.push(x * k, y * k, z * k);
-      sc.push(0.85 + rand() * 0.3);
-    }
-    globe.add(pointsFrom(pos, sc, dotMaterial(0x7c9385, 0.9, 3.0)));
-  })();
-
-  // the five highlighted countries: denser rust-coloured dots, staggered rows
-  var litMat;
-  (function () {
-    var pos = [], sc = [];
-    polys.forEach(function (p) {
-      var step = FILL_STEP[p.name] || 0.8;
-      var b = p.box, row = 0;
-      for (var lat = b[1] + step / 2; lat <= b[3]; lat += step, row++) {
-        for (var lon = b[0] + step / 2 + (row % 2) * step / 2; lon <= b[2]; lon += step) {
-          if (!inRing(lon, lat, p.ring)) continue;
-          var v = latLonToVec(lat, lon, R * 1.003);
-          pos.push(v.x, v.y, v.z);
-          sc.push(0.95 + rand() * 0.25);
-        }
-      }
-    });
-    litMat = dotMaterial(0xc4623e, 1.0, 2.9);
-    globe.add(pointsFrom(pos, sc, litMat));
-  })();
-
-  // ---- country borders ----
-  function arcSegments(indices, radius) {
-    var pos = [];
-    indices.forEach(function (idx) {
-      var pts = arcs[idx];
-      for (var i = 0; i < pts.length - 1; i++) {
-        var a = pts[i], b = pts[i + 1];
-        if (Math.abs(a[0] - b[0]) > 180) continue; // never draw across the antimeridian
-        var va = latLonToVec(a[1], a[0], radius), vb = latLonToVec(b[1], b[0], radius);
-        pos.push(va.x, va.y, va.z, vb.x, vb.y, vb.z);
-      }
-    });
-    var g = new THREE.BufferGeometry();
-    g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-    return g;
-  }
-  var hiSet = {};
-  data.hi.forEach(function (i) { hiSet[i] = true; });
-  var loIdx = [];
-  for (var ai = 0; ai < arcs.length; ai++) if (!hiSet[ai]) loIdx.push(ai);
-
-  // every other country: quiet borders
-  globe.add(new THREE.LineSegments(arcSegments(loIdx, R * 1.0025),
-    new THREE.LineBasicMaterial({ color: 0x46525b, transparent: true, opacity: 0.6 })));
-  // highlighted countries: bright borders with a row of glowing beads along them
-  globe.add(new THREE.LineSegments(arcSegments(data.hi, R * 1.0045),
-    new THREE.LineBasicMaterial({ color: 0xe8845f, transparent: true, opacity: 1 })));
-  (function () {
-    var pos = [], sc = [];
-    data.hi.forEach(function (idx) {
-      var pts = arcs[idx];
-      for (var i = 0; i < pts.length - 1; i++) {
-        var a = pts[i], b = pts[i + 1];
-        if (Math.abs(a[0] - b[0]) > 180) continue;
-        var len = Math.max(Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1]));
-        var n = Math.max(1, Math.round(len / 0.35));
-        for (var k = 0; k < n; k++) {
-          var t = k / n;
-          var v = latLonToVec(a[1] + (b[1] - a[1]) * t, a[0] + (b[0] - a[0]) * t, R * 1.005);
-          pos.push(v.x, v.y, v.z);
-          sc.push(0.8);
-        }
-      }
-    });
-    globe.add(pointsFrom(pos, sc, dotMaterial(0xf2a07c, 0.85, 2.2)));
-  })();
-
-  // atmosphere glow (outside the spinning group, so it never moves)
-  scene.add(new THREE.Mesh(
-    new THREE.SphereGeometry(R * 1.14, 64, 48),
-    new THREE.ShaderMaterial({
-      uniforms: { uColor: { value: new THREE.Color(0xc4623e) } },
-      transparent: true,
-      blending: THREE.AdditiveBlending,
-      side: THREE.BackSide,
-      depthWrite: false,
-      vertexShader: [
-        "varying vec3 vN;",
-        "void main(){ vN = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }"
-      ].join("\n"),
-      fragmentShader: [
-        "uniform vec3 uColor; varying vec3 vN;",
-        "void main(){",
-        "  float i = pow(max(0.0, 0.66 - dot(vN, vec3(0.0, 0.0, 1.0))), 3.4);",
-        "  gl_FragColor = vec4(uColor * i * 0.95, i);",
-        "}"
-      ].join("\n")
-    })
-  ));
-  // thin rim light on the globe's own edge
-  scene.add(new THREE.Mesh(
-    new THREE.SphereGeometry(R * 1.008, 64, 48),
-    new THREE.ShaderMaterial({
-      uniforms: { uColor: { value: new THREE.Color(0x9bb3a6) } },
-      transparent: true,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      vertexShader: [
-        "varying vec3 vN;",
-        "void main(){ vN = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }"
-      ].join("\n"),
-      fragmentShader: [
-        "uniform vec3 uColor; varying vec3 vN;",
-        "void main(){ float i = pow(1.0 - max(vN.z, 0.0), 3.0) * 0.5; gl_FragColor = vec4(uColor * i, i); }"
-      ].join("\n")
-    })
-  ));
-
-  // ---- view state ----
-  var targetY = -VIEW_LON * DEG;
-  globe.rotation.order = "XYZ";
-  globe.rotation.x = REST_TILT;
-  // on load the globe starts with the USA facing you and sweeps across the Pacific to Asia
-  var INTRO_SWEEP = 2.9;
-  globe.rotation.y = reduceMotion ? targetY : targetY - INTRO_SWEEP;
-  var intro = reduceMotion ? 1 : 0;
-
-  function renderFrame(t) {
-    if (litMat) litMat.uniforms.uAlpha.value = reduceMotion ? 1 : 0.9 + 0.1 * Math.sin(t * 1.4);
     renderer.render(scene, camera);
   }
-  var clock0 = performance.now();
-  function renderOnce() { renderFrame((performance.now() - clock0) / 1000); }
 
-  size();
-  window.addEventListener("resize", size);
-
-  // ==========================================================================
-  // Drag to spin with momentum, gentle auto-spin when idle
-  // ==========================================================================
-  var dragging = false;
-  var lastX = 0, lastY = 0, velX = 0, velY = 0;
-  var idle = true, idleTimer = null;
-  var AUTO_SPEED = 0.12;
-
-  function clampTilt() { globe.rotation.x = Math.max(-1.2, Math.min(1.3, globe.rotation.x)); }
-  function setIdle(val) { idle = val; wrap.classList.toggle("is-idle", val); }
-
-  function onPointerDown(e) {
-    dragging = true;
-    intro = 1; // a touch takes over from the opening sweep
-    setIdle(false);
-    lastX = e.clientX; lastY = e.clientY; velX = 0; velY = 0;
-    wrap.classList.add("is-dragging");
-    if (canvas.setPointerCapture) { try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ } }
-    clearTimeout(idleTimer);
-  }
-  function onPointerMove(e) {
-    if (!dragging) return;
-    var dx = e.clientX - lastX, dy = e.clientY - lastY;
-    lastX = e.clientX; lastY = e.clientY;
-    var sens = 0.006;
-    globe.rotation.y += dx * sens;
-    globe.rotation.x += dy * sens;
-    clampTilt();
-    velX = dx * sens; velY = dy * sens;
-    if (reduceMotion) renderOnce();
-  }
-  function onPointerUp() {
-    if (!dragging) return;
-    dragging = false;
-    wrap.classList.remove("is-dragging");
-    idleTimer = setTimeout(function () { setIdle(true); }, 1600);
+  function loop() {
+    raf = 0;
+    if (!visible) return;
+    frame(Math.min(clock.getDelta(), 0.05));
+    raf = requestAnimationFrame(loop);
   }
 
-  canvas.style.touchAction = "none";
-  canvas.addEventListener("pointerdown", onPointerDown);
-  window.addEventListener("pointermove", onPointerMove);
-  window.addEventListener("pointerup", onPointerUp);
-  window.addEventListener("pointercancel", onPointerUp);
-
-  if (reduceMotion) { renderOnce(); return; }
-
-  var lastT = 0;
-  var paused = false;
-  function ease(x) { return 1 - Math.pow(1 - x, 3); }
-
-  function animate(now) {
-    if (paused) return;
-    var dt = Math.min((now - lastT) / 1000, 0.05) || 0;
-    lastT = now;
-
-    if (intro < 1) {
-      intro = Math.min(1, intro + dt / 3.2);
-      globe.rotation.y = targetY - INTRO_SWEEP * (1 - ease(intro));
-    } else if (dragging) {
-      // handled in pointer move
-    } else if (Math.abs(velX) > 0.0002 || Math.abs(velY) > 0.0002) {
-      globe.rotation.y += velX;
-      globe.rotation.x += velY;
-      clampTilt();
-      velX *= 0.94; velY *= 0.94;
-    } else if (idle) {
-      globe.rotation.y += dt * AUTO_SPEED;
-      globe.rotation.x += (REST_TILT - globe.rotation.x) * Math.min(1, dt * 0.8); // drift back to the resting tilt
+  if (reduceMotion) {
+    time = 1.2;
+    frame(0);
+  } else {
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(function (entries) {
+        visible = entries[0].isIntersecting;
+        if (visible && !raf) { clock.getDelta(); raf = requestAnimationFrame(loop); }
+      }).observe(wrap);
     }
-
-    renderFrame((now - clock0) / 1000);
-    requestAnimationFrame(animate);
+    raf = requestAnimationFrame(loop);
   }
-  requestAnimationFrame(animate);
-  idleTimer = setTimeout(function () { setIdle(true); }, 900);
-
-  // pause the loop offscreen to save battery
-  if ("IntersectionObserver" in window) {
-    var io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        if (!entry.isIntersecting) {
-          paused = true;
-        } else if (paused) {
-          paused = false;
-          lastT = performance.now();
-          requestAnimationFrame(animate);
-        }
-      });
-    }, { threshold: 0.01 });
-    io.observe(wrap);
-  }
-
 })();
