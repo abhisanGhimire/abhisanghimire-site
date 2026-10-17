@@ -1,4 +1,4 @@
-﻿/* ==========================================================================
+/* ==========================================================================
    Hero 3D: a dotted globe with country borders and a small satellite.
    Drag to spin; it keeps drifting on its own. Needs three.js (r128) and data/globe-data.js (window.GLOBE_DATA).
    ========================================================================== */
