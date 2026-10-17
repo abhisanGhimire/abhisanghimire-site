@@ -150,9 +150,8 @@
     return canvasTex(380, 270, function (g, w, h) {
       g.fillStyle = "rgba(18,22,26,.94)"; roundRect(g, 4, 4, w - 8, h - 8, 20); g.fill();
       g.strokeStyle = cd.color; g.lineWidth = 4; roundRect(g, 4, 4, w - 8, h - 8, 20); g.stroke();
-      g.fillStyle = cd.color; g.font = "700 35px Georgia, serif"; g.textAlign = "left"; g.textBaseline = "alphabetic";
-      g.fillText(cd.label, 26, 62);
-      g.fillStyle = "rgba(255,255,255,.14)"; g.fillRect(26, 78, w - 52, 3);
+      // picture only, no text: centre the drawing in the card
+      g.save(); g.translate(w / 2, h / 2); g.scale(1.12, 1.12); g.translate(-w / 2, -h / 2 - 32);
       var i, cx = w / 2;
       if (cd.draw === "code") {
         var cols = [SAGE, LIGHT, CREAM, RUST, SAGE, CREAM], ind = [0, 1, 1, 2, 1, 0];
@@ -176,6 +175,7 @@
         g.strokeStyle = LIGHT; g.lineWidth = 4; g.beginPath(); g.moveTo(cx + 96, 146); g.lineTo(cx + 96, 200); g.stroke();
         g.fillStyle = LIGHT; g.beginPath(); g.arc(cx + 96, 206, 7, 0, 7); g.fill();
       }
+      g.restore();
     });
   }
   var panels = CARDS.map(function (cd, i) {
