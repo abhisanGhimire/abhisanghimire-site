@@ -1,8 +1,8 @@
 /* ==========================================================================
-   Hero 3D: a dotted globe with Nepal highlighted and its flag flying.
-   Land comes from Natural Earth (public domain), drawn as dots; the flag is
-   the official construction. Drag to spin, double-click to return to Nepal.
-   Needs three.js (r128) and data/globe-data.js (window.GLOBE_DATA).
+   Hero 3D: a dotted globe with country borders. India, Nepal, China, the
+   Philippines and the United States are lit in the site's rust colour.
+   Land and borders come from Natural Earth (public domain).
+   Drag to spin. Needs three.js (r128) and data/globe-data.js (window.GLOBE_DATA).
    ========================================================================== */
 (function () {
   "use strict";
@@ -14,11 +14,13 @@
 
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  var R = 2;                                   // globe radius
-  var NEPAL_VIEW = { lat: 28.2, lon: 84.1 };   // centre of the country
-  var FLAG_AT = { lat: 27.717, lon: 85.324 };  // Kathmandu
-  var REST_TILT = 0.2;                         // north pole tipped slightly toward the viewer
+  var R = 2;                  // globe radius
+  var VIEW_LON = 102;         // resting view: Asia, where four of the five countries are
+  var REST_TILT = 0.32;       // north pole tipped toward the viewer
   var DEG = Math.PI / 180;
+
+  // dot spacing (degrees) used to fill each highlighted country; small countries need finer dots
+  var FILL_STEP = { "India": 1.0, "Nepal": 0.34, "China": 1.05, "Philippines": 0.42, "United States of America": 1.05 };
 
   var scene = new THREE.Scene();
   var camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
@@ -28,7 +30,7 @@
   try {
     renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
   } catch (e) {
-    return; // no WebGL: the page still reads fine without the globe
+    return; // no WebGL: the page reads fine without the globe
   }
   renderer.setClearColor(0x000000, 0);
 
@@ -75,14 +77,53 @@
     var idx = row * data.landW + col;
     return (bits[idx >> 3] >> (idx & 7)) & 1;
   }
-  var nepal = data.nepal; // [[lon, lat], ...]
-  function inNepal(lon, lat) {
+
+  // border arcs: delta-encoded integers -> [lon, lat] points
+  var arcs = data.arcs.map(function (flat) {
+    var pts = [], x = 0, y = 0;
+    for (var i = 0; i < flat.length; i += 2) {
+      if (i === 0) { x = flat[0]; y = flat[1]; } else { x += flat[i]; y += flat[i + 1]; }
+      pts.push([x / data.q, y / data.q]);
+    }
+    return pts;
+  });
+  function ringFromArcs(list) {
+    var pts = [];
+    list.forEach(function (idx) {
+      var a = idx >= 0 ? arcs[idx] : arcs[~idx].slice().reverse();
+      for (var k = pts.length ? 1 : 0; k < a.length; k++) pts.push(a[k]);
+    });
+    return pts;
+  }
+
+  // the highlighted countries as polygons (with bounding boxes for quick tests)
+  var polys = [];
+  Object.keys(data.countries).forEach(function (name) {
+    data.countries[name].forEach(function (list) {
+      var ring = ringFromArcs(list);
+      var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+      ring.forEach(function (p) {
+        if (p[0] < x0) x0 = p[0]; if (p[0] > x1) x1 = p[0];
+        if (p[1] < y0) y0 = p[1]; if (p[1] > y1) y1 = p[1];
+      });
+      polys.push({ name: name, ring: ring, box: [x0, y0, x1, y1] });
+    });
+  });
+  function inRing(lon, lat, ring) {
     var inside = false;
-    for (var i = 0, j = nepal.length - 1; i < nepal.length; j = i++) {
-      var xi = nepal[i][0], yi = nepal[i][1], xj = nepal[j][0], yj = nepal[j][1];
+    for (var i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      var xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1];
       if ((yi > lat) !== (yj > lat) && lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) inside = !inside;
     }
     return inside;
+  }
+  function inHighlighted(lon, lat) {
+    for (var i = 0; i < polys.length; i++) {
+      var b = polys[i].box;
+      if (lon < b[0] || lon > b[2] || lat < b[1] || lat > b[3]) continue;
+      if (inRing(lon, lat, polys[i].ring)) return true;
+    }
+    return false;
   }
 
   // ---- everything that spins lives in this group ----
@@ -128,7 +169,7 @@
     }
     var g = new THREE.BufferGeometry();
     g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-    globe.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0x2b3136, transparent: true, opacity: 0.55 })));
+    globe.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0x232a2f, transparent: true, opacity: 0.5 })));
   })();
 
   // ---- dots (round, fade toward the limb) ----
@@ -185,37 +226,79 @@
       var th = golden * i;
       var x = Math.cos(th) * r, z = Math.sin(th) * r;
       var lat = Math.asin(y) / DEG, lon = Math.atan2(x, z) / DEG;
-      if (!isLand(lat, lon) || inNepal(lon, lat)) continue;
+      if (lat < -58 || !isLand(lat, lon) || inHighlighted(lon, lat)) continue; // no dots on Antarctica
       var k = R * 1.002;
       pos.push(x * k, y * k, z * k);
       sc.push(0.85 + rand() * 0.3);
     }
-    globe.add(pointsFrom(pos, sc, dotMaterial(0x7c9385, 0.95, 3.0)));
+    globe.add(pointsFrom(pos, sc, dotMaterial(0x7c9385, 0.9, 3.0)));
   })();
 
-  // Nepal: its own finer, crimson dots, plus its border
-  var nepalMat;
+  // the five highlighted countries: denser rust-coloured dots, staggered rows
+  var litMat;
   (function () {
     var pos = [], sc = [];
-    for (var lat = 26.3; lat <= 30.5; lat += 0.2) {
-      for (var lon = 80.0; lon <= 88.25; lon += 0.2) {
-        if (!inNepal(lon, lat)) continue;
-        var v = latLonToVec(lat, lon, R * 1.003);
-        pos.push(v.x, v.y, v.z);
-        sc.push(1.0 + rand() * 0.25);
+    polys.forEach(function (p) {
+      var step = FILL_STEP[p.name] || 0.8;
+      var b = p.box, row = 0;
+      for (var lat = b[1] + step / 2; lat <= b[3]; lat += step, row++) {
+        for (var lon = b[0] + step / 2 + (row % 2) * step / 2; lon <= b[2]; lon += step) {
+          if (!inRing(lon, lat, p.ring)) continue;
+          var v = latLonToVec(lat, lon, R * 1.003);
+          pos.push(v.x, v.y, v.z);
+          sc.push(0.95 + rand() * 0.25);
+        }
       }
-    }
-    nepalMat = dotMaterial(0xdc143c, 1.0, 3.1);
-    globe.add(pointsFrom(pos, sc, nepalMat));
-
-    var line = [];
-    nepal.forEach(function (p) {
-      var v = latLonToVec(p[1], p[0], R * 1.004);
-      line.push(v.x, v.y, v.z);
     });
-    var lg = new THREE.BufferGeometry();
-    lg.setAttribute("position", new THREE.Float32BufferAttribute(line, 3));
-    globe.add(new THREE.LineLoop(lg, new THREE.LineBasicMaterial({ color: 0xff5a73, transparent: true, opacity: 0.95 })));
+    litMat = dotMaterial(0xc4623e, 1.0, 2.9);
+    globe.add(pointsFrom(pos, sc, litMat));
+  })();
+
+  // ---- country borders ----
+  function arcSegments(indices, radius) {
+    var pos = [];
+    indices.forEach(function (idx) {
+      var pts = arcs[idx];
+      for (var i = 0; i < pts.length - 1; i++) {
+        var a = pts[i], b = pts[i + 1];
+        if (Math.abs(a[0] - b[0]) > 180) continue; // never draw across the antimeridian
+        var va = latLonToVec(a[1], a[0], radius), vb = latLonToVec(b[1], b[0], radius);
+        pos.push(va.x, va.y, va.z, vb.x, vb.y, vb.z);
+      }
+    });
+    var g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    return g;
+  }
+  var hiSet = {};
+  data.hi.forEach(function (i) { hiSet[i] = true; });
+  var loIdx = [];
+  for (var ai = 0; ai < arcs.length; ai++) if (!hiSet[ai]) loIdx.push(ai);
+
+  // every other country: quiet borders
+  globe.add(new THREE.LineSegments(arcSegments(loIdx, R * 1.0025),
+    new THREE.LineBasicMaterial({ color: 0x46525b, transparent: true, opacity: 0.6 })));
+  // highlighted countries: bright borders with a row of glowing beads along them
+  globe.add(new THREE.LineSegments(arcSegments(data.hi, R * 1.0045),
+    new THREE.LineBasicMaterial({ color: 0xe8845f, transparent: true, opacity: 1 })));
+  (function () {
+    var pos = [], sc = [];
+    data.hi.forEach(function (idx) {
+      var pts = arcs[idx];
+      for (var i = 0; i < pts.length - 1; i++) {
+        var a = pts[i], b = pts[i + 1];
+        if (Math.abs(a[0] - b[0]) > 180) continue;
+        var len = Math.max(Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1]));
+        var n = Math.max(1, Math.round(len / 0.35));
+        for (var k = 0; k < n; k++) {
+          var t = k / n;
+          var v = latLonToVec(a[1] + (b[1] - a[1]) * t, a[0] + (b[0] - a[0]) * t, R * 1.005);
+          pos.push(v.x, v.y, v.z);
+          sc.push(0.8);
+        }
+      }
+    });
+    globe.add(pointsFrom(pos, sc, dotMaterial(0xf2a07c, 0.85, 2.2)));
   })();
 
   // atmosphere glow (outside the spinning group, so it never moves)
@@ -259,122 +342,17 @@
     })
   ));
 
-  // ---- the flag on its pole ----
-  var flagDir = latLonToVec(FLAG_AT.lat, FLAG_AT.lon, 1).normalize();
-  var POLE_H = 0.8;
-  var pole = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.012, 0.012, POLE_H, 8),
-    new THREE.MeshBasicMaterial({ color: 0xeceae4 })
-  );
-  pole.position.copy(flagDir.clone().multiplyScalar(R + POLE_H / 2));
-  pole.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), flagDir);
-  globe.add(pole);
-
-  var tip = new THREE.Object3D();
-  tip.position.copy(flagDir.clone().multiplyScalar(R + POLE_H));
-  globe.add(tip);
-
-  var FLAG_H = 0.62, FLAG_W = FLAG_H * data.flagAspect;
-  var FLAG_DROP = 0.14; // how far the hoist reaches below the pole tip
-  var SEG_X = 16, SEG_Y = 20;
-  var flagGeo = new THREE.PlaneGeometry(FLAG_W, FLAG_H, SEG_X, SEG_Y);
-  flagGeo.translate(FLAG_W / 2, FLAG_H / 2 - FLAG_DROP, 0); // hoist on the left edge, standing mostly above the pole tip
-  var flagBase = flagGeo.attributes.position.array.slice();
-  var flagColors = new Float32Array(flagBase.length);
-  flagColors.fill(1);
-  flagGeo.setAttribute("color", new THREE.BufferAttribute(flagColors, 3));
-  var flagMat = new THREE.MeshBasicMaterial({
-    vertexColors: true, side: THREE.DoubleSide, transparent: true, alphaTest: 0.05
-  });
-  var flagMesh = new THREE.Mesh(flagGeo, flagMat);
-  flagMesh.visible = false;
-  tip.add(flagMesh);
-
-  (function loadFlag() {
-    var img = new Image();
-    img.onload = function () {
-      var cw = 512, ch = Math.round(cw / data.flagAspect);
-      var cv = document.createElement("canvas");
-      cv.width = cw; cv.height = ch;
-      cv.getContext("2d").drawImage(img, 0, 0, cw, ch);
-      var tex = new THREE.CanvasTexture(cv);
-      tex.anisotropy = 4;
-      flagMat.map = tex;
-      flagMat.needsUpdate = true;
-      flagReady = true;
-      if (reduceMotion) renderOnce();
-    };
-    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(data.flagSvg);
-  })();
-  var flagReady = false;
-
-  function waveFlag(t) {
-    var p = flagGeo.attributes.position.array;
-    var c = flagGeo.attributes.color.array;
-    for (var i = 0; i < p.length; i += 3) {
-      var x0 = flagBase[i], y0 = flagBase[i + 1];
-      var u = x0 / FLAG_W;            // 0 at the pole, 1 at the free edge
-      var v = (FLAG_H - FLAG_DROP - y0) / FLAG_H; // 0 at the top, 1 at the bottom
-      var phase = u * 4.4 - t * 2.7;
-      var z = Math.sin(phase) * 0.05 * u + Math.sin(u * 8.0 - t * 4.3 + v * 2.2) * 0.014 * u;
-      p[i] = x0 * (1 - 0.05 * Math.abs(Math.sin(phase)) * u);
-      p[i + 1] = y0 + Math.sin(phase * 0.8) * 0.012 * u * (0.3 + v);
-      p[i + 2] = z;
-      var slope = Math.cos(phase) * 0.05 * 4.4 * u;   // cloth shading from the slope
-      var shade = 0.84 + 0.2 * Math.max(-1, Math.min(1, slope * 2.4));
-      c[i] = c[i + 1] = c[i + 2] = shade;
-    }
-    flagGeo.attributes.position.needsUpdate = true;
-    flagGeo.attributes.color.needsUpdate = true;
-  }
-
-  // a soft ping ring where the flag stands
-  var rings = [0, 1].map(function (k) {
-    var m = new THREE.Mesh(
-      new THREE.RingGeometry(0.05, 0.065, 48),
-      new THREE.MeshBasicMaterial({ color: 0xff5a73, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false })
-    );
-    m.position.copy(flagDir.clone().multiplyScalar(R * 1.006));
-    m.lookAt(flagDir.clone().multiplyScalar(R * 3));
-    m.userData.phase = k * 0.5;
-    globe.add(m);
-    return m;
-  });
-  function pingRings(t) {
-    rings.forEach(function (m) {
-      var s = ((t * 0.45 + m.userData.phase) % 1);
-      m.scale.setScalar(1 + s * 5.5);
-      m.material.opacity = (1 - s) * (1 - s) * 0.65;
-    });
-  }
-
   // ---- view state ----
-  var targetY = -NEPAL_VIEW.lon * DEG;
+  var targetY = -VIEW_LON * DEG;
   globe.rotation.order = "XYZ";
   globe.rotation.x = REST_TILT;
-  globe.rotation.y = reduceMotion ? targetY : targetY - 2.4; // spins in to Nepal on load
+  // on load the globe starts with the USA facing you and sweeps across the Pacific to Asia
+  var INTRO_SWEEP = 2.9;
+  globe.rotation.y = reduceMotion ? targetY : targetY - INTRO_SWEEP;
   var intro = reduceMotion ? 1 : 0;
 
-  var qGlobe = new THREE.Quaternion();
-  var flagWorldDir = new THREE.Vector3();
-  function smooth(a, b, x) { var k = Math.max(0, Math.min(1, (x - a) / (b - a))); return k * k * (3 - 2 * k); }
   function renderFrame(t) {
-    waveFlag(reduceMotion ? 0.6 : t);
-    pingRings(reduceMotion ? 0.3 : t);
-    if (nepalMat) nepalMat.uniforms.uAlpha.value = reduceMotion ? 1 : 0.88 + 0.12 * Math.sin(t * 1.6);
-    globe.updateMatrixWorld(true);
-    globe.getWorldQuaternion(qGlobe);
-    // the pole rises and the flag unfurls as Nepal turns toward the viewer, and folds away as it turns off
-    flagWorldDir.copy(flagDir).applyQuaternion(qGlobe);
-    var up = smooth(0.45, 0.82, flagWorldDir.z);
-    pole.visible = up > 0.005;
-    pole.scale.set(1, Math.max(up, 0.001), 1);
-    pole.position.copy(flagDir).multiplyScalar(R + (POLE_H * up) / 2);
-    tip.position.copy(flagDir).multiplyScalar(R + POLE_H * up);
-    flagMesh.scale.setScalar(Math.max(up, 0.001));
-    flagMesh.visible = flagReady && up > 0.01;
-    qGlobe.invert();
-    flagMesh.quaternion.copy(qGlobe).multiply(camera.quaternion); // the flag always faces the viewer
+    if (litMat) litMat.uniforms.uAlpha.value = reduceMotion ? 1 : 0.9 + 0.1 * Math.sin(t * 1.4);
     renderer.render(scene, camera);
   }
   var clock0 = performance.now();
@@ -384,23 +362,19 @@
   window.addEventListener("resize", size);
 
   // ==========================================================================
-  // Drag to spin with momentum, double-click for Nepal, gentle auto-spin when idle
+  // Drag to spin with momentum, gentle auto-spin when idle
   // ==========================================================================
   var dragging = false;
   var lastX = 0, lastY = 0, velX = 0, velY = 0;
   var idle = true, idleTimer = null;
   var AUTO_SPEED = 0.12;
-  var focus = null; // animation back to Nepal
-  var downX = 0, downY = 0, moved = false, lastTap = 0;
 
   function clampTilt() { globe.rotation.x = Math.max(-1.2, Math.min(1.3, globe.rotation.x)); }
   function setIdle(val) { idle = val; wrap.classList.toggle("is-idle", val); }
 
   function onPointerDown(e) {
     dragging = true;
-    focus = null;
-    intro = 1; // a touch takes over from the opening spin
-    downX = e.clientX; downY = e.clientY; moved = false;
+    intro = 1; // a touch takes over from the opening sweep
     setIdle(false);
     lastX = e.clientX; lastY = e.clientY; velX = 0; velY = 0;
     wrap.classList.add("is-dragging");
@@ -411,7 +385,6 @@
     if (!dragging) return;
     var dx = e.clientX - lastX, dy = e.clientY - lastY;
     lastX = e.clientX; lastY = e.clientY;
-    if (Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY) > 8) moved = true;
     var sens = 0.006;
     globe.rotation.y += dx * sens;
     globe.rotation.x += dy * sens;
@@ -424,23 +397,6 @@
     dragging = false;
     wrap.classList.remove("is-dragging");
     idleTimer = setTimeout(function () { setIdle(true); }, 1600);
-    // two quick taps (or a double-click) bring Nepal back to the front, on touch screens too
-    if (!moved) {
-      var now = performance.now();
-      if (now - lastTap < 380) { lastTap = 0; goToNepal(); } else { lastTap = now; }
-    }
-  }
-  function goToNepal() {
-    var twoPi = Math.PI * 2;
-    intro = 1;
-    var from = globe.rotation.y;
-    var to = targetY + Math.round((from - targetY) / twoPi) * twoPi; // nearest way round
-    focus = { t0: performance.now(), dur: 1100, fromY: from, toY: to, fromX: globe.rotation.x, toX: REST_TILT };
-    velX = velY = 0;
-    setIdle(false);
-    clearTimeout(idleTimer);
-    idleTimer = setTimeout(function () { setIdle(true); }, 2600);
-    if (reduceMotion) { globe.rotation.y = to; globe.rotation.x = REST_TILT; renderOnce(); focus = null; }
   }
 
   canvas.style.touchAction = "none";
@@ -461,14 +417,8 @@
     lastT = now;
 
     if (intro < 1) {
-      intro = Math.min(1, intro + dt / 2.8);
-      globe.rotation.y = targetY - 2.4 * (1 - ease(intro));
-    } else if (focus) {
-      var k = Math.min(1, (performance.now() - focus.t0) / focus.dur);
-      var e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
-      globe.rotation.y = focus.fromY + (focus.toY - focus.fromY) * e;
-      globe.rotation.x = focus.fromX + (focus.toX - focus.fromX) * e;
-      if (k >= 1) focus = null;
+      intro = Math.min(1, intro + dt / 3.2);
+      globe.rotation.y = targetY - INTRO_SWEEP * (1 - ease(intro));
     } else if (dragging) {
       // handled in pointer move
     } else if (Math.abs(velX) > 0.0002 || Math.abs(velY) > 0.0002) {
