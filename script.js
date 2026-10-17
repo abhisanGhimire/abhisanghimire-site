@@ -162,8 +162,14 @@
     var PAGES_BASE = "https://abhisanghimire.github.io/";
     var API_URL = "https://api.github.com/users/" + USER + "/repos?per_page=100&sort=pushed";
     var FALLBACK_URL = "data/github-repos.json";
-    // repos that are not "projects": this site, the profile README repo, a GitHub training repo
-    var HIDDEN = ["abhisanghimire-site", "abhisanghimire", "github-slideshow"];
+    var DESCRIPTIONS_URL = "data/project-descriptions.json";
+    // repos that are not shown: this site, the profile README repo, a GitHub training repo,
+    // projects the owner chose to hide, and empty placeholder repos
+    var HIDDEN = [
+      "abhisanghimire-site", "abhisanghimire", "github-slideshow",
+      "i-dont-know-github", "urnotes", "emmanuel-opoku", "sherylmemorialfund", "abhisan-app",
+      "my-history", "download-app", "soft_delete_force_delete", "kotlin_practice_with_android"
+    ];
     var ALL_LIMIT = 12;
 
     var state = { repos: [], view: "live", forks: false, showAll: false };
@@ -176,7 +182,24 @@
     // the grid sits inside a scroll-reveal container: make sure it is never left hidden
     grid.classList.add("is-visible");
 
+    // display names where the repo name does not turn into a good title automatically
+    var TITLES = {
+      "image2pdf": "Image to PDF",
+      "hpsg-website": "HPSG Website",
+      "covidtracker": "COVID Tracker",
+      "corona_map": "Corona Map",
+      "d3_server": "D3 Server",
+      "3D_modeling_with_three_js": "3D Modeling with Three.js",
+      "completeLaravel": "Complete Laravel",
+      "kobo_form_with_lee": "KoBo Form with Lee",
+      "flask_csci245": "Flask Attendance (CSCI 245)",
+      "research_clark_image_processing": "Clark Image Processing Research",
+      "nabin_forked": "Food Ordering App",
+      "ecom": "E-commerce Store"
+    };
+
     function prettyName(name) {
+      if (TITLES[name]) return TITLES[name];
       return name
         .replace(/[-_]+/g, " ")
         .replace(/\.py$/, "")
@@ -184,7 +207,7 @@
         .replace(/\b([a-z])/g, function (m) { return m.toUpperCase(); });
     }
 
-    function normalize(r) {
+    function normalize(r, descriptions) {
       var live = "";
       if (r.has_pages) {
         live = PAGES_BASE + encodeURIComponent(r.name) + "/";
@@ -194,7 +217,8 @@
       return {
         name: r.name,
         title: prettyName(r.name),
-        description: (r.description || "").trim(),
+        // hand-written description first, then the GitHub one
+        description: String((descriptions && descriptions[r.name]) || r.description || "").trim(),
         url: r.html_url,
         live: live,
         language: r.language || "",
@@ -225,14 +249,16 @@
       return a;
     }
 
-    function card(r) {
+    function card(r, view) {
+      // live demos are only offered on the "Live demos" tab; "All repositories" links to code only
+      var showLive = view === "live" && !!r.live;
       var article = el("article", "project-card gh-card");
-      article.appendChild(el("p", "status-tag " + (r.live ? "status-pub" : "status-project"),
-        r.fork ? "Fork" : (r.live ? "Live demo" : "Repository")));
+      article.appendChild(el("p", "status-tag " + (showLive ? "status-pub" : "status-project"),
+        r.fork ? "Fork" : (showLive ? "Live demo" : "Repository")));
       article.appendChild(el("h3", "", r.title));
 
       var desc = el("p", "project-field" + (r.description ? "" : " is-empty"),
-        r.description || "No description yet.");
+        r.description || (r.fork ? "Forked repository." : "No description yet."));
       article.appendChild(desc);
 
       var meta = el("p", "gh-meta");
@@ -245,7 +271,7 @@
       article.appendChild(meta);
 
       var actions = el("div", "gh-actions");
-      if (r.live) actions.appendChild(link(r.live, "btn btn-primary btn-small", "View live ↗"));
+      if (showLive) actions.appendChild(link(r.live, "btn btn-primary btn-small", "View live ↗"));
       actions.appendChild(link(r.url, "btn btn-outline btn-small", "View code ↗"));
       article.appendChild(actions);
       return article;
@@ -266,7 +292,7 @@
       if (!shown.length) {
         grid.appendChild(el("p", "gh-status", "Nothing to show here yet."));
       } else {
-        shown.forEach(function (r) { grid.appendChild(card(r)); });
+        shown.forEach(function (r) { grid.appendChild(card(r, state.view)); });
       }
 
       if (moreBtn) {
@@ -298,11 +324,11 @@
       });
     }
 
-    function load(raw) {
+    function load(raw, descriptions) {
       state.repos = raw
         .filter(function (r) { return !r.private && !r.archived; })
         .filter(function (r) { return HIDDEN.indexOf(String(r.name).toLowerCase()) === -1; })
-        .map(normalize)
+        .map(function (r) { return normalize(r, descriptions); })
         .sort(function (a, b) { return (b.pushed || 0) - (a.pushed || 0); });
       render();
     }
@@ -315,9 +341,13 @@
     }
 
     // live data from GitHub first (always current), saved copy if the API is unavailable
+    var descriptionsPromise = fetchJson(DESCRIPTIONS_URL).catch(function () { return {}; });
+
     fetchJson(API_URL)
       .catch(function () { return fetchJson(FALLBACK_URL); })
-      .then(load)
+      .then(function (raw) {
+        return descriptionsPromise.then(function (descriptions) { load(raw, descriptions); });
+      })
       .catch(function () {
         grid.textContent = "";
         var p = el("p", "gh-status", "Couldn't load the project list right now. ");
