@@ -22,6 +22,12 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      # Cloudflare caches .css/.js for hours; a per-commit version in the URL makes every deploy show up immediately.
+      - name: Cache-bust assets
+        run: |
+          v="${GITHUB_SHA::8}"
+          sed -i "s|href=\"styles.css\"|href=\"styles.css?v=${v}\"|; s|src=\"script.js\"|src=\"script.js?v=${v}\"|; s|src=\"hero3d.js\"|src=\"hero3d.js?v=${v}\"|" index.html
+          grep -E "styles.css\?v=|script.js\?v=|hero3d.js\?v=" index.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
