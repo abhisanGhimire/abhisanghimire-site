@@ -747,3 +747,17 @@ h2.sub-title{ font-size: 1.4rem; margin: 52px 0 18px; max-width: none; }
   .explore-grid{ grid-template-columns: 1fr; }
   .cv-card{ padding: 20px; }
 }
+
+
+/* "At a glance" as one tidy row (Contact page) */
+.about-facts.facts-row{
+  grid-template-columns: 1.5fr 1.2fr 1.2fr; gap: 0;
+  border: 1px solid var(--border-soft); border-radius: var(--radius); background: var(--surface);
+}
+.facts-row > div{ padding: 16px 22px; align-content: start; }
+.facts-row > div + div{ border-left: 1px solid var(--border-soft); }
+@media (max-width: 860px){
+  .about-facts.facts-row{ grid-template-columns: 1fr; }
+  .facts-row > div{ padding: 14px 18px; }
+  .facts-row > div + div{ border-left: 0; border-top: 1px solid var(--border-soft); }
+}
