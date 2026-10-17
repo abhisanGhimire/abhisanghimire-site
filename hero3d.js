@@ -100,12 +100,33 @@
   leftPage.scale.x = -1;
   book.add(rightPage); book.add(leftPage);
 
-  // the turning page
+  // the turning page: bends as it lifts, curling at the free edge, then lays down on the left
+  var flipGeo = pageGeometry();
+  var flipBaseZ = [];
+  for (var fi = 0; fi < flipGeo.attributes.position.count; fi++) flipBaseZ.push(flipGeo.attributes.position.getZ(fi));
+  var backTex = pageTex("left");
+  backTex.wrapS = THREE.RepeatWrapping; backTex.repeat.x = -1; backTex.offset.x = 1;
+  var flipFront = new THREE.Mesh(flipGeo, new THREE.MeshBasicMaterial({ map: pageTex("right"), side: THREE.FrontSide }));
+  var flipBack = new THREE.Mesh(flipGeo, new THREE.MeshBasicMaterial({ map: backTex, side: THREE.BackSide }));
   var flip = new THREE.Group();
-  var flipMesh = new THREE.Mesh(pageGeometry(), new THREE.MeshBasicMaterial({ map: pageTex("right"), side: THREE.DoubleSide }));
-  flipMesh.position.y = 0.02;
-  flip.add(flipMesh);
+  flip.add(flipFront); flip.add(flipBack);
   book.add(flip);
+
+  function bendFlip(e) {
+    var p = flipGeo.attributes.position, cols = SEG + 1, ds = PW / SEG;
+    var lag = Math.sin(e * Math.PI) * 1.15;           // how far the free edge trails
+    var x = 0, y = 0.05;
+    for (var c = 0; c < cols; c++) {
+      var u = c / SEG;
+      var slope = Math.cos(u * Math.PI * 0.85) * 0.3 * Math.PI * 0.85 / PW;
+      var rest = Math.atan(slope);
+      var ang = (1 - e) * rest + e * (Math.PI - rest) - lag * Math.pow(u, 1.2);
+      if (c > 0) { x += Math.cos(ang) * ds; y += Math.sin(ang) * ds; }
+      for (var i = c; i < p.count; i += cols) p.setXYZ(i, x, y, flipBaseZ[i]);
+    }
+    p.needsUpdate = true;
+    flipGeo.computeVertexNormals();
+  }
 
   // covers and page block
   var coverMat = new THREE.MeshBasicMaterial({ color: 0x8a3f26 });
@@ -211,56 +232,66 @@
   resize();
   window.addEventListener("resize", resize);
 
-  // ---------- drag to turn ----------
-  var dragging = false, lastX = 0, velY = 0, turn = 0, hoverX = 0, hoverY = 0;
+  // ---------- drag to turn (smooth: everything eases toward a target) ----------
+  var dragging = false, lastX = 0, lastY = 0, velY = 0;
+  var turn = 0, tilt = 0;            // drag amounts (turn is unbounded, tilt is clamped)
+  var hoverTX = 0, hoverTY = 0;      // where the pointer wants the scene to lean
+  var viewY = 0, viewX = 0;          // what is actually drawn
+  function damp(cur, target, rate, dt) { return cur + (target - cur) * (1 - Math.exp(-rate * dt)); }
+
   wrap.addEventListener("pointerdown", function (e) {
-    dragging = true; lastX = e.clientX; velY = 0;
+    dragging = true; lastX = e.clientX; lastY = e.clientY; velY = 0;
     wrap.classList.add("is-dragging");
     try { wrap.setPointerCapture(e.pointerId); } catch (err) {}
   });
   wrap.addEventListener("pointermove", function (e) {
+    var r = wrap.getBoundingClientRect();
     if (dragging) {
-      velY = (e.clientX - lastX) * 0.01; lastX = e.clientX;
-      turn += velY;
+      var dx = e.clientX - lastX, dy = e.clientY - lastY;
+      lastX = e.clientX; lastY = e.clientY;
+      turn += dx * 0.009;
+      tilt = Math.max(-0.45, Math.min(0.45, tilt + dy * 0.004));
+      velY = velY * 0.6 + dx * 0.009 * 0.4;
     } else if (e.pointerType === "mouse") {
-      var r = wrap.getBoundingClientRect();
-      hoverY = ((e.clientX - r.left) / r.width - 0.5) * 0.5;
-      hoverX = ((e.clientY - r.top) / r.height - 0.5) * 0.3;
+      hoverTY = Math.max(-0.5, Math.min(0.5, ((e.clientX - r.left) / r.width - 0.5) * 0.6));
+      hoverTX = Math.max(-0.5, Math.min(0.5, ((e.clientY - r.top) / r.height - 0.5) * 0.35));
     }
   });
   function end() { dragging = false; wrap.classList.remove("is-dragging"); }
   wrap.addEventListener("pointerup", end);
   wrap.addEventListener("pointercancel", end);
-  wrap.addEventListener("pointerleave", function () { hoverX = hoverY = 0; });
+  wrap.addEventListener("pointerleave", function () { if (!dragging) { hoverTX = hoverTY = 0; } });
 
   // ---------- render ----------
   var clock = new THREE.Clock();
   var visible = true, raf = 0, time = 0;
   var inv = new THREE.Quaternion();
-  var FLIP = 3.2; // seconds per page turn
+  var FLIP = 4.6; // seconds per page turn
 
   function frame(dt) {
     time += dt;
     if (!dragging) {
-      turn += velY; velY *= 0.95;
-      if (Math.abs(velY) < 0.003) {
-        var home = Math.round(turn / (Math.PI * 2)) * Math.PI * 2;
-        turn += (home - turn) * Math.min(1, dt * 1.2);
-      }
+      // let go: carry on briefly, then ease back to the front view
+      turn += velY; velY *= Math.exp(-3 * dt);
+      var home = Math.round(turn / (Math.PI * 2)) * Math.PI * 2;
+      var pull = Math.abs(velY) < 0.004 ? 1.6 : 0;
+      turn = damp(turn, home, pull, dt);
+      tilt = damp(tilt, 0, 1.8, dt);
     }
-    pivot.rotation.y = turn + hoverY + Math.sin(time * 0.3) * 0.3;
-    pivot.rotation.x = hoverX * 0.5;
+    var sway = reduceMotion ? 0 : Math.sin(time * 0.3) * 0.3;
+    viewY = damp(viewY, turn + hoverTY + sway, 8, dt);
+    viewX = damp(viewX, tilt + hoverTX, 8, dt);
+    pivot.rotation.y = viewY;
+    pivot.rotation.x = viewX;
 
-    // page turn: 0..1 sweep, then rest
-    var ph = (time % FLIP) / FLIP, sweep = Math.min(1, ph / 0.55);
-    var e = sweep < 0.5 ? 2 * sweep * sweep : 1 - Math.pow(-2 * sweep + 2, 2) / 2;
-    flip.rotation.z = e * Math.PI;
-    flip.visible = ph < 0.55 && ph > 0.001;
-    flipMesh.position.y = 0.02 + Math.sin(e * Math.PI) * 0.12;
+    // page turn: a smooth sweep, then rest
+    var ph = (time % FLIP) / FLIP, sweep = Math.min(1, ph / 0.6);
+    var e = sweep < 0.5 ? 4 * sweep * sweep * sweep : 1 - Math.pow(-2 * sweep + 2, 3) / 2;
+    flip.visible = ph < 0.6 && ph > 0.002;
+    if (flip.visible) bendFlip(e);
 
     updateRise(time);
 
-    pivot.updateMatrixWorld(true);
     inv.copy(pivot.quaternion).invert();
     var pos = beamGeo.attributes.position.array;
     panels.forEach(function (p, i) {
