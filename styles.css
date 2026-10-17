@@ -156,11 +156,21 @@ h3{
   display:flex; align-items:center; justify-content:space-between;
 }
 .brand{ display:flex; align-items:center; gap:10px; }
-.brand-mark{
-  font-family: var(--font-mono); font-size: .78rem;
-  border:1px solid var(--border); color: var(--accent);
-  width: 30px; height:30px; display:flex; align-items:center; justify-content:center;
-  border-radius: var(--radius);
+/* AB monogram: the rust segment is A's crossbar carried across into B */
+.brand-logo{ display:block; width:36px; height:36px; flex:none; }
+.brand-logo .logo-tile{ fill: var(--bg); stroke: var(--border); stroke-width: 2; transition: stroke .25s var(--ease); }
+.brand-logo .logo-art{ fill:none; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+.brand-logo .draw-a, .brand-logo .draw-b{ stroke: var(--text); }
+.brand-logo .draw-link{ stroke: var(--accent); transition: stroke .25s var(--ease); }
+.brand:hover .logo-tile{ stroke: var(--accent-dim); }
+.brand:hover .draw-link{ stroke: #D9774F; }
+/* the finished logo is the default state; the animation only plays the draw-in on load */
+.brand-logo .draw{ stroke-dasharray: 1 2; animation: ab-draw .8s var(--ease) backwards; }
+.brand-logo .draw-b{ animation-delay: .2s; }
+.brand-logo .draw-link{ animation-delay: .65s; animation-duration: .35s; }
+@keyframes ab-draw{ from{ stroke-dashoffset: 1; } to{ stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce){
+  .brand-logo .draw{ animation: none; }
 }
 .brand-name{ font-family: var(--font-display); font-weight:600; font-size: 1.02rem; }
 
