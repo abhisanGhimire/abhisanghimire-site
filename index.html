@@ -66,6 +66,7 @@
         <li><a href="#publications" data-nav>Publications</a></li>
         <li><a href="#experience" data-nav>Experience</a></li>
         <li><a href="#projects" data-nav>Projects</a></li>
+        <li><a href="#github" data-nav>GitHub</a></li>
         <li><a href="#toolkit" data-nav>Toolkit</a></li>
         <li><a href="#education" data-nav>Education</a></li>
         <li><a href="#about" data-nav>About</a></li>
@@ -412,9 +413,33 @@
   </section>
 
   <!-- ============ TOOLKIT ============ -->
-  <section class="section" id="toolkit">
+  <!-- ============ GITHUB ============ -->
+  <section class="section" id="github">
     <div class="section-inner">
-      <p class="eyebrow">05 &middot; Technical Toolkit</p>
+      <p class="eyebrow">05 &middot; GitHub</p>
+      <h2>Projects on GitHub</h2>
+      <p class="gh-intro">Live demos run straight from GitHub Pages, and every repository links to its source code. Everything here is pulled from <a href="https://github.com/abhisanGhimire" target="_blank" rel="noopener">github.com/abhisanGhimire</a>.</p>
+
+      <div class="gh-controls">
+        <div class="gh-tabs" role="tablist" aria-label="Project view">
+          <button type="button" role="tab" class="gh-tab" id="gh-tab-live" data-view="live" aria-selected="true">Live demos <span class="gh-count" id="gh-count-live"></span></button>
+          <button type="button" role="tab" class="gh-tab" id="gh-tab-all" data-view="all" aria-selected="false">All repositories <span class="gh-count" id="gh-count-all"></span></button>
+        </div>
+        <label class="gh-forks"><input type="checkbox" id="gh-show-forks"> Include forks</label>
+      </div>
+
+      <div class="project-grid gh-grid" id="gh-grid" aria-live="polite">
+        <p class="gh-status">Loading projects&hellip;</p>
+      </div>
+      <div class="gh-more-wrap"><button type="button" class="btn btn-outline btn-small" id="gh-more" hidden>Show all repositories</button></div>
+
+      <noscript><p class="gh-intro">Turn on JavaScript to browse the project list, or visit <a href="https://github.com/abhisanGhimire?tab=repositories" rel="noopener">my GitHub profile</a>.</p></noscript>
+    </div>
+  </section>
+
+  <section class="section section-alt" id="toolkit">
+    <div class="section-inner">
+      <p class="eyebrow">06 &middot; Technical Toolkit</p>
       <h2>Capabilities, by category</h2>
 
       <div class="toolkit-grid">
@@ -459,9 +484,9 @@
   </section>
 
   <!-- ============ EDUCATION ============ -->
-  <section class="section section-alt" id="education">
+  <section class="section" id="education">
     <div class="section-inner">
-      <p class="eyebrow">06 &middot; Education</p>
+      <p class="eyebrow">07 &middot; Education</p>
       <h2>Academic background</h2>
 
       <div class="edu-entry">
@@ -492,9 +517,9 @@
   </section>
 
   <!-- ============ ABOUT ============ -->
-  <section class="section" id="about">
+  <section class="section section-alt" id="about">
     <div class="section-inner about-inner">
-      <p class="eyebrow">07 &middot; About</p>
+      <p class="eyebrow">08 &middot; About</p>
       <h2>A software engineer and educator pursuing doctoral research</h2>
       <div class="about-text">
         <p>I'm a software engineer by training and practice, and an educator by current role, and I'm looking to bring both into a PhD. Teaching has shown me, in a way that shipping code alone never did, how people actually learn, adopt, and get stuck on the systems we build, and that gap between what we design and how people really use it is the question I want to study formally.</p>
@@ -506,9 +531,9 @@
   </section>
 
   <!-- ============ CONTACT ============ -->
-  <section class="section section-alt" id="contact">
+  <section class="section" id="contact">
     <div class="section-inner">
-      <p class="eyebrow">08 &middot; Contact</p>
+      <p class="eyebrow">09 &middot; Contact</p>
       <h2>Get in touch</h2>
       <p class="lede">I'm interested in software engineering roles, research collaborations, and opportunities that combine the two.</p>
 
