@@ -761,3 +761,10 @@ h2.sub-title{ font-size: 1.4rem; margin: 52px 0 18px; max-width: none; }
   .facts-row > div{ padding: 14px 18px; }
   .facts-row > div + div{ border-left: 0; border-top: 1px solid var(--border-soft); }
 }
+
+
+/* caption under the globe */
+.hero3d-hint{
+  margin-top: 10px; text-align: center;
+  font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: .04em; color: var(--text-faint);
+}
