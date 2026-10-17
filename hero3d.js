@@ -1,8 +1,8 @@
 /* ==========================================================================
    Hero 3D: a learning environment for the modern world. An open book turns
-   its pages while knowledge rises from it into floating windows (code, data,
-   a model, an AI chat) that orbit it. Everything is built here, no model
-   files. Drag to turn it; it settles back. Needs three.js (r128).
+   its pages while knowledge rises from it into four floating cards (software
+   engineer, educator, researcher, academia) that orbit it. Everything is built here, no model
+   files. It turns on its own and ignores the pointer. Needs three.js (r128).
    ========================================================================== */
 (function () {
   "use strict";
@@ -17,7 +17,7 @@
 
   var scene = new THREE.Scene();
   var camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
-  camera.position.set(0, 2.4, 11.2);
+  camera.position.set(0, 2.5, 12.2);
   camera.lookAt(0, 0.9, 0);
 
   var renderer;
@@ -139,45 +139,49 @@
   book.position.y = -1.15; book.scale.setScalar(1.2);
   book.rotation.x = 0.0;
 
-  // ---------- floating windows: code, data, a model, an AI chat ----------
-  function panelTex(kind) {
-    return canvasTex(300, 220, function (g, w, h) {
-      var accent = kind === "chat" ? LIGHT : kind === "data" ? SAGE : kind === "model" ? RUST : SAGE;
-      g.fillStyle = "rgba(18,22,26,.92)"; roundRect(g, 3, 3, w - 6, h - 6, 14); g.fill();
-      g.strokeStyle = accent; g.lineWidth = 3; roundRect(g, 3, 3, w - 6, h - 6, 14); g.stroke();
-      [RUST, LIGHT, SAGE].forEach(function (c, i) { g.fillStyle = c; g.beginPath(); g.arc(24 + i * 16, 24, 5, 0, 7); g.fill(); });
-      g.fillStyle = "rgba(255,255,255,.12)"; g.fillRect(14, 40, w - 28, 2);
-      var i, y;
-      if (kind === "code") {
-        var cols = [SAGE, LIGHT, CREAM, RUST, SAGE, CREAM, LIGHT];
-        var ind = [0, 1, 1, 2, 2, 1, 0];
-        for (i = 0; i < 7; i++) { g.fillStyle = cols[i]; g.fillRect(24 + ind[i] * 18, 58 + i * 21, 50 + (i * 53) % 110, 7); g.fillStyle = "rgba(255,255,255,.18)"; g.fillRect(24 + ind[i] * 18 + 60 + (i * 53) % 110, 58 + i * 21, 40, 7); }
-      } else if (kind === "data") {
-        var bars = [0.4, 0.65, 0.5, 0.85, 0.7, 0.95];
-        for (i = 0; i < bars.length; i++) { g.fillStyle = i === 5 ? LIGHT : SAGE; var bh = bars[i] * 120; g.fillRect(28 + i * 42, 190 - bh, 28, bh); }
-        g.strokeStyle = CREAM; g.lineWidth = 3; g.beginPath();
-        for (i = 0; i < bars.length; i++) { var px = 42 + i * 42, py = 190 - bars[i] * 120 - 14; if (i) g.lineTo(px, py); else g.moveTo(px, py); }
+  // ---------- four floating cards: what I do ----------
+  var CARDS = [
+    { label: "Software Engineer", sub: "build", color: SAGE, draw: "code" },
+    { label: "Educator", sub: "teach", color: LIGHT, draw: "board" },
+    { label: "Researcher", sub: "discover", color: RUST, draw: "chart" },
+    { label: "Academia", sub: "publish", color: CREAM, draw: "cap" }
+  ];
+  function cardTex(cd) {
+    return canvasTex(380, 270, function (g, w, h) {
+      g.fillStyle = "rgba(18,22,26,.94)"; roundRect(g, 4, 4, w - 8, h - 8, 20); g.fill();
+      g.strokeStyle = cd.color; g.lineWidth = 4; roundRect(g, 4, 4, w - 8, h - 8, 20); g.stroke();
+      g.fillStyle = cd.color; g.font = "700 35px Georgia, serif"; g.textAlign = "left"; g.textBaseline = "alphabetic";
+      g.fillText(cd.label, 26, 62);
+      g.fillStyle = "rgba(255,255,255,.14)"; g.fillRect(26, 78, w - 52, 3);
+      var i, cx = w / 2;
+      if (cd.draw === "code") {
+        var cols = [SAGE, LIGHT, CREAM, RUST, SAGE, CREAM], ind = [0, 1, 1, 2, 1, 0];
+        for (i = 0; i < 6; i++) { g.fillStyle = cols[i]; g.fillRect(34 + ind[i] * 24, 108 + i * 24, 70 + (i * 61) % 120, 9); g.fillStyle = "rgba(255,255,255,.2)"; g.fillRect(34 + ind[i] * 24 + 80 + (i * 61) % 120, 108 + i * 24, 44, 9); }
+      } else if (cd.draw === "board") {
+        g.fillStyle = "#1f3a30"; roundRect(g, 34, 100, w - 68, 118, 10); g.fill();
+        g.strokeStyle = "#caa57a"; g.lineWidth = 4; roundRect(g, 34, 100, w - 68, 118, 10); g.stroke();
+        g.strokeStyle = CREAM; g.lineWidth = 3; g.beginPath(); g.moveTo(60, 190); g.lineTo(110, 130); g.lineTo(160, 190); g.moveTo(75, 168); g.lineTo(145, 168); g.stroke();
+        g.fillStyle = LIGHT; g.beginPath(); g.arc(250, 150, 14, 0, 7); g.fill();
+        g.fillStyle = CREAM; g.fillRect(205, 186, 100, 6); g.fillRect(205, 202, 70, 6);
+      } else if (cd.draw === "chart") {
+        var bars = [0.35, 0.55, 0.45, 0.75, 0.65, 0.95];
+        for (i = 0; i < bars.length; i++) { g.fillStyle = i === 5 ? LIGHT : RUST; var bh = bars[i] * 118; g.fillRect(40 + i * 52, 224 - bh, 34, bh); }
+        g.strokeStyle = CREAM; g.lineWidth = 4; g.beginPath();
+        for (i = 0; i < bars.length; i++) { var px = 57 + i * 52, py = 224 - bars[i] * 118 - 16; if (i) g.lineTo(px, py); else g.moveTo(px, py); }
         g.stroke();
-      } else if (kind === "model") {
-        var layers = [3, 5, 4, 2];
-        var pts = layers.map(function (n, li) { var a = []; for (var j = 0; j < n; j++) a.push([46 + li * 70, 120 + (j - (n - 1) / 2) * 30]); return a; });
-        g.strokeStyle = "rgba(239,230,214,.28)"; g.lineWidth = 1.5;
-        for (var l = 0; l < pts.length - 1; l++) pts[l].forEach(function (a) { pts[l + 1].forEach(function (b) { g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); }); });
-        pts.forEach(function (layer, li) { layer.forEach(function (q, j) { g.fillStyle = (li + j) % 3 === 0 ? LIGHT : RUST; g.beginPath(); g.arc(q[0], q[1], 8, 0, 7); g.fill(); }); });
       } else {
-        g.fillStyle = "rgba(255,255,255,.16)"; roundRect(g, 24, 58, 170, 42, 12); g.fill();
-        g.fillStyle = "rgba(255,255,255,.5)"; g.fillRect(38, 72, 110, 6); g.fillRect(38, 84, 70, 6);
-        g.fillStyle = LIGHT; roundRect(g, 90, 116, 186, 56, 12); g.fill();
-        g.fillStyle = INK; g.fillRect(104, 130, 140, 6); g.fillRect(104, 142, 150, 6); g.fillRect(104, 154, 90, 6);
-        g.fillStyle = SAGE; for (i = 0; i < 3; i++) { g.beginPath(); g.arc(34 + i * 14, 190, 4, 0, 7); g.fill(); }
+        // graduation cap
+        g.fillStyle = CREAM; g.beginPath(); g.moveTo(cx, 108); g.lineTo(cx + 96, 146); g.lineTo(cx, 184); g.lineTo(cx - 96, 146); g.closePath(); g.fill();
+        g.fillStyle = "#b9ad98"; g.beginPath(); g.moveTo(cx - 56, 166); g.lineTo(cx - 56, 204); g.quadraticCurveTo(cx, 232, cx + 56, 204); g.lineTo(cx + 56, 166); g.lineTo(cx, 188); g.closePath(); g.fill();
+        g.strokeStyle = LIGHT; g.lineWidth = 4; g.beginPath(); g.moveTo(cx + 96, 146); g.lineTo(cx + 96, 200); g.stroke();
+        g.fillStyle = LIGHT; g.beginPath(); g.arc(cx + 96, 206, 7, 0, 7); g.fill();
       }
     });
   }
-  var kinds = ["code", "data", "model", "chat"];
-  var panels = kinds.map(function (k, i) {
-    var m = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.03), new THREE.MeshBasicMaterial({ map: panelTex(k), transparent: true, side: THREE.DoubleSide }));
+  var panels = CARDS.map(function (cd, i) {
+    var m = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 1.208), new THREE.MeshBasicMaterial({ map: cardTex(cd), transparent: true, side: THREE.DoubleSide }));
     pivot.add(m);
-    return { mesh: m, a: i / kinds.length * Math.PI * 2, r: 2.35, y: [1.5, 2.1, 1.1, 1.8][i], speed: 0.16 + i * 0.012, bob: i * 1.3 };
+    return { mesh: m, a: i / CARDS.length * Math.PI * 2 + 0.4, r: 2.1, y: [1.2, 2.35, 0.95, 1.8][i], speed: 0.14 + i * 0.01, bob: i * 1.3 };
   });
 
   // ---------- beams from the book to each window ----------
@@ -232,37 +236,7 @@
   resize();
   window.addEventListener("resize", resize);
 
-  // ---------- drag to turn (smooth: everything eases toward a target) ----------
-  var dragging = false, lastX = 0, lastY = 0, velY = 0;
-  var turn = 0, tilt = 0;            // drag amounts (turn is unbounded, tilt is clamped)
-  var hoverTX = 0, hoverTY = 0;      // where the pointer wants the scene to lean
-  var viewY = 0, viewX = 0;          // what is actually drawn
-  function damp(cur, target, rate, dt) { return cur + (target - cur) * (1 - Math.exp(-rate * dt)); }
-
-  wrap.addEventListener("pointerdown", function (e) {
-    dragging = true; lastX = e.clientX; lastY = e.clientY; velY = 0;
-    wrap.classList.add("is-dragging");
-    try { wrap.setPointerCapture(e.pointerId); } catch (err) {}
-  });
-  wrap.addEventListener("pointermove", function (e) {
-    var r = wrap.getBoundingClientRect();
-    if (dragging) {
-      var dx = e.clientX - lastX, dy = e.clientY - lastY;
-      lastX = e.clientX; lastY = e.clientY;
-      turn += dx * 0.009;
-      tilt = Math.max(-0.45, Math.min(0.45, tilt + dy * 0.004));
-      velY = velY * 0.6 + dx * 0.009 * 0.4;
-    } else if (e.pointerType === "mouse") {
-      hoverTY = Math.max(-0.5, Math.min(0.5, ((e.clientX - r.left) / r.width - 0.5) * 0.6));
-      hoverTX = Math.max(-0.5, Math.min(0.5, ((e.clientY - r.top) / r.height - 0.5) * 0.35));
-    }
-  });
-  function end() { dragging = false; wrap.classList.remove("is-dragging"); }
-  wrap.addEventListener("pointerup", end);
-  wrap.addEventListener("pointercancel", end);
-  wrap.addEventListener("pointerleave", function () { if (!dragging) { hoverTX = hoverTY = 0; } });
-
-  // ---------- render ----------
+  // ---------- render: runs on its own, ignores the pointer ----------
   var clock = new THREE.Clock();
   var visible = true, raf = 0, time = 0;
   var inv = new THREE.Quaternion();
@@ -270,19 +244,8 @@
 
   function frame(dt) {
     time += dt;
-    if (!dragging) {
-      // let go: carry on briefly, then ease back to the front view
-      turn += velY; velY *= Math.exp(-3 * dt);
-      var home = Math.round(turn / (Math.PI * 2)) * Math.PI * 2;
-      var pull = Math.abs(velY) < 0.004 ? 1.6 : 0;
-      turn = damp(turn, home, pull, dt);
-      tilt = damp(tilt, 0, 1.8, dt);
-    }
-    var sway = reduceMotion ? 0 : Math.sin(time * 0.3) * 0.3;
-    viewY = damp(viewY, turn + hoverTY + sway, 8, dt);
-    viewX = damp(viewX, tilt + hoverTX, 8, dt);
-    pivot.rotation.y = viewY;
-    pivot.rotation.x = viewX;
+    pivot.rotation.y = reduceMotion ? 0 : Math.sin(time * 0.3) * 0.38;
+    pivot.rotation.x = reduceMotion ? 0 : Math.sin(time * 0.21) * 0.05;
 
     // page turn: a smooth sweep, then rest
     var ph = (time % FLIP) / FLIP, sweep = Math.min(1, ph / 0.6);
