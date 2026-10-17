@@ -71,46 +71,72 @@
     return geo;
   }
 
-  function pageTex(kind) {
+  // page designs: each side of the book can show any of these, so the pages that turn differ
+  var VARIANTS = ["text", "code", "diagram", "chart", "list", "sketch"];
+  function pageTex(variant, side) {
     return canvasTex(300, 420, function (g, w, h) {
       g.fillStyle = "#e3d9c6"; g.fillRect(0, 0, w, h);
-      // paper grain
       for (var n = 0; n < 900; n++) { g.fillStyle = "rgba(120,100,70," + (Math.random() * 0.05) + ")"; g.fillRect(Math.random() * w, Math.random() * h, 2, 2); }
-      // shadow in the gutter
-      var s = g.createLinearGradient(kind === "left" ? w : 0, 0, kind === "left" ? w - 70 : 70, 0);
-      s.addColorStop(0, "rgba(60,40,30,.45)"); s.addColorStop(1, "rgba(60,40,30,0)");
-      g.fillStyle = s; g.fillRect(0, 0, w, h);
-      var i, y;
-      g.fillStyle = RUST; g.fillRect(38, 40, 100, 11);
-      g.fillStyle = "#8d8576";
-      for (y = 72, i = 0; y < 172; y += 16, i++) g.fillRect(38, y, i % 4 === 3 ? 120 : 224, 6);
-      if (kind === "left") {
-        g.fillStyle = "#1c2227"; roundRect(g, 36, 196, 230, 104, 7); g.fill();
-        var cols = [SAGE, LIGHT, CREAM, SAGE, LIGHT, CREAM];
-        for (i = 0; i < 6; i++) { g.fillStyle = cols[i]; g.fillRect(50 + (i % 3) * 14, 210 + i * 14, 56 + (i * 41) % 100, 6); }
-        g.fillStyle = "#8d8576";
-        for (y = 322; y < 392; y += 16) g.fillRect(38, y, 224, 6);
+      var sh = g.createLinearGradient(side === "left" ? w : 0, 0, side === "left" ? w - 70 : 70, 0);
+      sh.addColorStop(0, "rgba(60,40,30,.45)"); sh.addColorStop(1, "rgba(60,40,30,0)");
+      g.fillStyle = sh; g.fillRect(0, 0, w, h);
+      var i, ink = "#8d8576";
+      var accent = [RUST, "#4e6a5c", "#b5563a", "#6a8f7c"][Math.floor(Math.random() * 4)];
+      g.fillStyle = accent; g.fillRect(38, 40, 60 + Math.random() * 70, 11);
+      g.fillStyle = ink;
+      function lines(y0, y1, step) { for (var yy = y0, k = 0; yy < y1; yy += step, k++) g.fillRect(38, yy, k % 4 === 3 ? 110 : 224, 6); }
+      if (variant === "text") {
+        lines(72, 390, 16);
+      } else if (variant === "code") {
+        lines(72, 150, 16);
+        g.fillStyle = "#1c2227"; roundRect(g, 36, 172, 230, 130, 7); g.fill();
+        var cols = [SAGE, LIGHT, CREAM, SAGE, LIGHT, CREAM, SAGE];
+        for (i = 0; i < 7; i++) { g.fillStyle = cols[i]; g.fillRect(50 + (i % 3) * 14, 188 + i * 15, 50 + (i * 41) % 110, 6); }
+        g.fillStyle = ink; lines(324, 392, 16);
+      } else if (variant === "diagram") {
+        lines(72, 150, 16);
+        var pts = [[80, 214], [148, 186], [214, 224], [114, 266], [188, 282], [236, 170]];
+        g.strokeStyle = ink; g.lineWidth = 2.5;
+        [[0, 1], [1, 2], [0, 3], [1, 3], [2, 4], [3, 4], [1, 5], [2, 5]].forEach(function (e) { g.beginPath(); g.moveTo(pts[e[0]][0], pts[e[0]][1]); g.lineTo(pts[e[1]][0], pts[e[1]][1]); g.stroke(); });
+        pts.forEach(function (q, k) { g.fillStyle = k % 2 ? RUST : "#4e6a5c"; g.beginPath(); g.arc(q[0], q[1], 11, 0, 7); g.fill(); });
+        g.fillStyle = ink; lines(318, 392, 16);
+      } else if (variant === "chart") {
+        lines(72, 120, 16);
+        var bars = [0.35, 0.55, 0.45, 0.8, 0.65, 0.95];
+        for (i = 0; i < 6; i++) { g.fillStyle = i === 5 ? RUST : "#4e6a5c"; var bh = bars[i] * 150; g.fillRect(42 + i * 36, 300 - bh, 24, bh); }
+        g.fillStyle = ink; g.fillRect(38, 304, 230, 3); lines(330, 392, 16);
+      } else if (variant === "list") {
+        for (i = 0; i < 7; i++) {
+          var yy = 80 + i * 40;
+          g.strokeStyle = ink; g.lineWidth = 2.5; g.strokeRect(40, yy, 18, 18);
+          if (i % 3 !== 2) { g.strokeStyle = RUST; g.lineWidth = 4; g.beginPath(); g.moveTo(44, yy + 9); g.lineTo(49, yy + 15); g.lineTo(60, yy + 1); g.stroke(); }
+          g.fillStyle = ink; g.fillRect(74, yy + 6, 120 + (i * 37) % 90, 6);
+        }
       } else {
-        var pts = [[80, 236], [148, 208], [214, 246], [114, 286], [188, 300]];
-        g.strokeStyle = "#8d8576"; g.lineWidth = 2.5;
-        [[0, 1], [1, 2], [0, 3], [1, 3], [2, 4], [3, 4]].forEach(function (e) {
-          g.beginPath(); g.moveTo(pts[e[0]][0], pts[e[0]][1]); g.lineTo(pts[e[1]][0], pts[e[1]][1]); g.stroke();
-        });
-        pts.forEach(function (q, i) { g.fillStyle = i % 2 ? RUST : "#4e6a5c"; g.beginPath(); g.arc(q[0], q[1], 11, 0, 7); g.fill(); });
-        g.fillStyle = "#8d8576";
-        for (y = 336; y < 396; y += 16) g.fillRect(38, y, 224, 6);
+        g.strokeStyle = ink; g.lineWidth = 3;
+        g.beginPath(); g.arc(120, 200, 56, 0, 7); g.stroke();
+        g.beginPath(); g.moveTo(120, 144); g.lineTo(176, 256); g.lineTo(64, 256); g.closePath(); g.stroke();
+        g.strokeStyle = accent; g.lineWidth = 4; g.beginPath(); g.moveTo(40, 300); g.bezierCurveTo(100, 250, 170, 340, 262, 280); g.stroke();
+        g.fillStyle = ink; lines(330, 392, 16);
       }
     });
   }
-  var texRight = pageTex("right"), texLeft = pageTex("left");
-  var texBack = pageTex("left");
-  texBack.wrapS = THREE.RepeatWrapping; texBack.repeat.x = -1; texBack.offset.x = 1;
+  function mirrored(t) {
+    var c = t.clone(); c.needsUpdate = true;
+    c.wrapS = THREE.RepeatWrapping; c.repeat.x = -1; c.offset.x = 1;
+    return c;
+  }
+  var TR = VARIANTS.map(function (v) { return pageTex(v, "right"); });
+  var TL = VARIANTS.map(function (v) { return pageTex(v, "left"); });
+  var TB = TL.map(mirrored);
+  var curR = 3, curL = 1;
+  function pick(not) { var v; do { v = Math.floor(Math.random() * VARIANTS.length); } while (v === not); return v; }
 
   var book = new THREE.Group();
   pivot.add(book);
 
-  var pageMatR = new THREE.MeshLambertMaterial({ map: texRight, side: THREE.DoubleSide });
-  var pageMatL = new THREE.MeshLambertMaterial({ map: texLeft, side: THREE.DoubleSide });
+  var pageMatR = new THREE.MeshLambertMaterial({ map: TR[curR], side: THREE.DoubleSide });
+  var pageMatL = new THREE.MeshLambertMaterial({ map: TL[curL], side: THREE.DoubleSide });
   var rightPage = new THREE.Mesh(pageGeometry(), pageMatR);
   var leftPage = new THREE.Mesh(pageGeometry(), pageMatL);
   leftPage.scale.x = -1;
@@ -201,25 +227,51 @@
   book.scale.setScalar(1.36);
   book.position.y = 0.1;
 
-  // ---------- turning pages: three in a rolling sequence ----------
-  var FLIP = 5.4;                    // seconds for a whole cycle of one page (turn + rest)
-  var flips = [0, 1, 2].map(function (i) {
+  // ---------- turning pages: several at once, both directions, each with its own design ----------
+  var SLOTS = 6;
+  var flips = [];
+  for (var si = 0; si < SLOTS; si++) (function (i) {
     var geo = pageGeometry();
     var baseZ = [];
     for (var k = 0; k < geo.attributes.position.count; k++) baseZ.push(geo.attributes.position.getZ(k));
-    var front = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: texRight, side: THREE.FrontSide }));
-    var back = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: texBack, side: THREE.BackSide }));
+    var front = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: TR[0], side: THREE.FrontSide }));
+    var back = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: TB[0], side: THREE.BackSide }));
     var grp = new THREE.Group();
     grp.add(front); grp.add(back);
-    grp.position.y = 0.012 + i * 0.012;
+    grp.position.y = 0.012 + i * 0.010;
     grp.visible = false;
     book.add(grp);
-    return { geo: geo, baseZ: baseZ, grp: grp, offset: i * (FLIP / 3) };
-  });
+    flips.push({ geo: geo, baseZ: baseZ, grp: grp, front: front, back: back, active: false, t: 0, dur: 2.5, dir: 1, lag: 1.0, endR: -1, endL: -1 });
+  })(si);
+
+  function startFlip(f) {
+    f.active = true; f.t = 0;
+    f.dur = 1.9 + Math.random() * 1.5;
+    f.lag = 0.8 + Math.random() * 0.8;
+    f.dir = Math.random() < 0.8 ? 1 : -1;            // mostly forward, sometimes back
+    var nl = pick(curL), nr = pick(curR);
+    if (f.dir === 1) {
+      f.front.material.map = TR[curR];                // what is on the right lifts away
+      f.back.material.map = TB[nl];                   // and shows this on the left once it lands
+      f.endL = nl; f.endR = -1;
+      curR = nr; rightPage.material.map = TR[nr];     // a new page is revealed under it
+    } else {
+      f.back.material.map = TB[curL];
+      f.front.material.map = TR[nr];
+      f.endR = nr; f.endL = -1;
+      curL = nl; leftPage.material.map = TL[nl];
+    }
+    f.front.material.needsUpdate = true; f.back.material.needsUpdate = true;
+  }
+  function endFlip(f) {
+    f.active = false; f.grp.visible = false;
+    if (f.endL >= 0) { curL = f.endL; leftPage.material.map = TL[curL]; }
+    if (f.endR >= 0) { curR = f.endR; rightPage.material.map = TR[curR]; }
+  }
 
   function bend(f, e) {
     var p = f.geo.attributes.position, cols = SEG + 1, ds = PW / SEG;
-    var lag = Math.sin(e * Math.PI) * 1.2;      // the free edge trails behind
+    var lag = Math.sin(e * Math.PI) * f.lag * 1.5;  // the free edge trails behind
     var x = 0, y = curve(0);
     for (var c = 0; c < cols; c++) {
       var u = c / SEG;
@@ -246,19 +298,28 @@
 
   // ---------- render: runs on its own, ignores the pointer ----------
   var clock = new THREE.Clock();
-  var visible = true, raf = 0, time = 0;
+  var visible = true, raf = 0, time = 0, spawn = 0.3;
 
   function frame(dt) {
     time += dt;
     pivot.rotation.y = reduceMotion ? -0.35 : -0.35 + Math.sin(time * 0.28) * 0.5;
     pivot.rotation.x = reduceMotion ? 0 : Math.sin(time * 0.2) * 0.05;
 
+    // start a new page every so often, in any free slot
+    spawn -= dt;
+    if (spawn <= 0) {
+      for (var q = 0; q < flips.length; q++) if (!flips[q].active) { startFlip(flips[q]); break; }
+      spawn = 0.55 + Math.random() * 0.9;
+    }
     flips.forEach(function (f) {
-      var ph = ((time + f.offset) % FLIP) / FLIP;
-      var sweep = Math.min(1, ph / 0.5);
+      if (!f.active) return;
+      f.t += dt;
+      var sweep = Math.min(1, f.t / f.dur);
       var e = sweep < 0.5 ? 4 * sweep * sweep * sweep : 1 - Math.pow(-2 * sweep + 2, 3) / 2;
-      f.grp.visible = ph < 0.5 && ph > 0.002;
-      if (f.grp.visible) bend(f, e);
+      if (f.dir < 0) e = 1 - e;
+      f.grp.visible = true;
+      bend(f, e);
+      if (sweep >= 1) endFlip(f);
     });
 
     renderer.render(scene, camera);
