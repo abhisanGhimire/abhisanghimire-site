@@ -1,7 +1,9 @@
 /* ==========================================================================
-   Hero 3D: a solid Rubik's cube turning slowly on its own while it scrambles
-   itself and then solves itself by undoing its moves. Built in three.js
-   (r128), no model files; it ignores the pointer.
+   Hero 3D: a traditional Newari house from the Kathmandu Valley, in the
+   Nepali brick-and-carved-timber style: red brick walls, carved lattice
+   windows, wooden eave struts, a terracotta tile roof and a golden finial.
+   Built entirely in three.js (r128), no model files. It turns slowly on its
+   own and ignores the pointer.
    ========================================================================== */
 (function () {
   "use strict";
@@ -14,8 +16,8 @@
 
   var scene = new THREE.Scene();
   var camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
-  camera.position.set(0, 0, 12.5);
-  camera.lookAt(0, 0, 0);
+  camera.position.set(0, 3.0, 11.6);
+  camera.lookAt(0, 0.9, 0);
 
   var renderer;
   try {
@@ -26,116 +28,228 @@
   }
   renderer.setClearColor(0x000000, 0);
 
-  // lighting: soft sky fill, warm key, rust rim from behind
-  scene.add(new THREE.HemisphereLight(0xfff1e0, 0x2a2f36, 0.55));
-  var key = new THREE.DirectionalLight(0xffe8d0, 0.85);
-  key.position.set(4, 6, 7);
+  // warm evening light with a cool fill and a rust rim from behind
+  scene.add(new THREE.HemisphereLight(0xfff0dc, 0x2b2622, 0.62));
+  var key = new THREE.DirectionalLight(0xffe2bd, 1.0);
+  key.position.set(5, 7, 8);
   scene.add(key);
-  var rim = new THREE.DirectionalLight(0xc4623e, 0.7);
-  rim.position.set(-6, -2, -5);
+  var rim = new THREE.DirectionalLight(0xc4623e, 0.55);
+  rim.position.set(-6, 3, -6);
   scene.add(rim);
 
-  var cube = new THREE.Group();
-  cube.scale.setScalar(0.92);
-  scene.add(cube);
+  var house = new THREE.Group();
+  scene.add(house);
 
-  // ---------- the cubies ----------
-  // face colours follow the site palette: rust, amber, cream, sage, slate blue, plum
-  var FACE = [
-    { n: [1, 0, 0], c: 0xc4623e }, { n: [-1, 0, 0], c: 0xe9a24b },
-    { n: [0, 1, 0], c: 0xefe6d6 }, { n: [0, -1, 0], c: 0x7fa38f },
-    { n: [0, 0, 1], c: 0x4a6fa5 }, { n: [0, 0, -1], c: 0x8a3b5e }
-  ];
-  function roundedSquare(size, r) {
-    var h = size / 2, s = new THREE.Shape();
-    s.moveTo(-h + r, -h); s.lineTo(h - r, -h); s.quadraticCurveTo(h, -h, h, -h + r);
-    s.lineTo(h, h - r); s.quadraticCurveTo(h, h, h - r, h); s.lineTo(-h + r, h);
-    s.quadraticCurveTo(-h, h, -h, h - r); s.lineTo(-h, -h + r); s.quadraticCurveTo(-h, -h, -h + r, -h);
-    return new THREE.ShapeGeometry(s, 6);
+  // ---------- textures drawn in code ----------
+  function canvasTex(w, h, draw) {
+    var c = document.createElement("canvas");
+    c.width = w; c.height = h;
+    draw(c.getContext("2d"), w, h);
+    var t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.anisotropy = 4;
+    return t;
   }
-  var stickerGeo = roundedSquare(0.8, 0.14);
-  var bodyGeo = new THREE.BoxGeometry(0.97, 0.97, 0.97);
-  var bodyMat = new THREE.MeshStandardMaterial({ color: 0x16191e, roughness: 0.55, metalness: 0.2 });
-  var stickerMats = FACE.map(function (f) { return new THREE.MeshStandardMaterial({ color: f.c, roughness: 0.38, metalness: 0.05 }); });
+  function rnd(a, b) { return a + Math.random() * (b - a); }
 
-  var cubies = [];
-  for (var x = -1; x <= 1; x++) for (var y = -1; y <= 1; y++) for (var z = -1; z <= 1; z++) {
-    var g = new THREE.Group();
-    g.add(new THREE.Mesh(bodyGeo, bodyMat));
-    FACE.forEach(function (f, fi) {
-      if (x * f.n[0] + y * f.n[1] + z * f.n[2] !== 1) return;     // only faces on the outside
-      var st = new THREE.Mesh(stickerGeo, stickerMats[fi]);
-      st.position.set(f.n[0] * 0.486, f.n[1] * 0.486, f.n[2] * 0.486);
-      st.lookAt(f.n[0] * 2, f.n[1] * 2, f.n[2] * 2);
-      g.add(st);
+  // handmade red brick, laid in rows with a half-brick offset
+  var brickTex = canvasTex(256, 256, function (g, w, h) {
+    g.fillStyle = "#4a3028"; g.fillRect(0, 0, w, h);                     // mortar
+    var bh = 21, bw = 56;
+    for (var row = 0, y = 2; y < h; y += bh, row++) {
+      for (var x = -(row % 2) * bw / 2; x < w; x += bw) {
+        var r = 150 + rnd(-22, 22), gr = 62 + rnd(-10, 12), b = 44 + rnd(-8, 8);
+        g.fillStyle = "rgb(" + (r | 0) + "," + (gr | 0) + "," + (b | 0) + ")";
+        g.fillRect(x + 2, y, bw - 4, bh - 4);
+      }
+    }
+    for (var n = 0; n < 1400; n++) { g.fillStyle = "rgba(0,0,0," + rnd(0.02, 0.09) + ")"; g.fillRect(rnd(0, w), rnd(0, h), 2, 2); }
+  });
+
+  // terracotta roof tiles, curved rows
+  var tileTex = canvasTex(256, 256, function (g, w, h) {
+    g.fillStyle = "#6b2d1c"; g.fillRect(0, 0, w, h);
+    var th = 26, tw = 32;
+    for (var row = 0, y = 0; y < h + th; y += th, row++) {
+      for (var x = -(row % 2) * tw / 2; x < w; x += tw) {
+        var r = 168 + rnd(-18, 18), gr = 78 + rnd(-8, 10), b = 48 + rnd(-6, 6);
+        var grad = g.createLinearGradient(0, y, 0, y + th);
+        grad.addColorStop(0, "rgb(" + ((r * 0.72) | 0) + "," + ((gr * 0.72) | 0) + "," + ((b * 0.72) | 0) + ")");
+        grad.addColorStop(1, "rgb(" + (r | 0) + "," + (gr | 0) + "," + (b | 0) + ")");
+        g.fillStyle = grad;
+        g.beginPath(); g.moveTo(x + 2, y); g.lineTo(x + tw - 2, y); g.lineTo(x + tw - 4, y + th - 3); g.quadraticCurveTo(x + tw / 2, y + th + 4, x + 4, y + th - 3); g.closePath(); g.fill();
+      }
+    }
+  });
+
+  var woodTex = canvasTex(128, 128, function (g, w, h) {
+    g.fillStyle = "#4a2a18"; g.fillRect(0, 0, w, h);
+    for (var i = 0; i < 40; i++) { g.strokeStyle = "rgba(20,10,4," + rnd(0.1, 0.35) + ")"; g.lineWidth = rnd(1, 2.5); g.beginPath(); var y0 = rnd(0, h); g.moveTo(0, y0); g.bezierCurveTo(w * 0.3, y0 + rnd(-6, 6), w * 0.7, y0 + rnd(-6, 6), w, y0 + rnd(-4, 4)); g.stroke(); }
+  });
+
+  // the carved window: dark timber frame with a diamond lattice and a gold-lit opening
+  function carvedWindow(w, h, lattice) {
+    return canvasTex(256, Math.round(256 * h / w), function (g, W, H) {
+      g.fillStyle = "#3b2214"; g.fillRect(0, 0, W, H);
+      var m = W * 0.09;
+      g.fillStyle = "#120d0a"; g.fillRect(m, m, W - 2 * m, H - 2 * m);                // dark opening
+      g.strokeStyle = "#c28a4b"; g.lineWidth = 2; g.strokeRect(m * 0.45, m * 0.45, W - m * 0.9, H - m * 0.9);
+      g.strokeStyle = "#6a3f22"; g.lineWidth = lattice ? 5 : 7;
+      var step = lattice ? W / 9 : W / 4;
+      g.save(); g.beginPath(); g.rect(m, m, W - 2 * m, H - 2 * m); g.clip();
+      for (var d = -H; d < W + H; d += step) {
+        g.beginPath(); g.moveTo(d, 0); g.lineTo(d + H, H); g.stroke();
+        g.beginPath(); g.moveTo(d, H); g.lineTo(d + H, 0); g.stroke();
+      }
+      g.restore();
     });
-    g.position.set(x, y, z);
-    cube.add(g);
-    cubies.push(g);
   }
 
-  // ---------- face turns ----------
-  var AXES = ["x", "y", "z"];
-  var turner = new THREE.Group();
-  cube.add(turner);
-  var move = null;                 // the turn in progress
-  var queue = [], history = [];
-  var phase = "pause", pauseLeft = 1.2, scrambleLeft = 0;
+  var woodMat = new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.8, metalness: 0.02 });
+  var darkMat = new THREE.MeshStandardMaterial({ color: 0x2b170d, roughness: 0.85 });
+  var goldMat = new THREE.MeshStandardMaterial({ color: 0xe0a93e, roughness: 0.32, metalness: 0.75 });
+  var stoneMat = new THREE.MeshStandardMaterial({ color: 0x8a8174, roughness: 0.95 });
 
-  function randomMove(prev) {
-    var m;
-    do {
-      m = { axis: AXES[Math.floor(Math.random() * 3)], layer: Math.floor(Math.random() * 3) - 1, dir: Math.random() < 0.5 ? 1 : -1 };
-    } while (prev && prev.axis === m.axis && prev.layer === m.layer);
+  // ---------- plinth and steps ----------
+  var plinth = new THREE.Mesh(new THREE.BoxGeometry(3.3, 0.18, 2.7), stoneMat);
+  plinth.position.y = 0.09; house.add(plinth);
+  var step = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.09, 0.32), stoneMat);
+  step.position.set(0, 0.045, 1.45); house.add(step);
+  var step2 = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.18, 0.2), stoneMat);
+  step2.position.set(0, 0.09, 1.32); house.add(step2);
+
+  // ---------- brick walls ----------
+  var BW = 2.5, BD = 2.0, BH = 2.3, BY = 0.18;
+  function brickMat(rx, ry) {
+    var t = brickTex.clone(); t.needsUpdate = true; t.repeat.set(rx, ry);
+    return new THREE.MeshStandardMaterial({ map: t, roughness: 0.92 });
+  }
+  var side = brickMat(BD / 0.9, BH / 0.9), front = brickMat(BW / 0.9, BH / 0.9), cap = new THREE.MeshStandardMaterial({ color: 0x3a2018, roughness: 1 });
+  var body = new THREE.Mesh(new THREE.BoxGeometry(BW, BH, BD), [side, side, cap, cap, front, front]);
+  body.position.y = BY + BH / 2;
+  house.add(body);
+  var topY = BY + BH, fz = BD / 2;
+
+  // timber beams marking the floors
+  [BY + BH / 3, BY + 2 * BH / 3].forEach(function (y) {
+    var beam = new THREE.Mesh(new THREE.BoxGeometry(BW + 0.06, 0.07, BD + 0.06), woodMat);
+    beam.position.y = y; house.add(beam);
+  });
+  [-1, 1].forEach(function (sx) {                                    // corner posts
+    [-1, 1].forEach(function (sz) {
+      var post = new THREE.Mesh(new THREE.BoxGeometry(0.09, BH, 0.09), woodMat);
+      post.position.set(sx * (BW / 2), BY + BH / 2, sz * (BD / 2)); house.add(post);
+    });
+  });
+
+  // ---------- windows and the door (front and back faces get windows, sides get small ones) ----------
+  function windowAt(x, y, w, h, z, ry, lattice) {
+    var g = new THREE.Group();
+    var frame = new THREE.Mesh(new THREE.BoxGeometry(w + 0.08, h + 0.08, 0.08), woodMat);
+    var pane = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: carvedWindow(w, h, lattice), roughness: 0.7 }));
+    pane.position.z = 0.045;
+    g.add(frame); g.add(pane);
+    g.position.set(x, y, z); g.rotation.y = ry;
+    house.add(g);
+  }
+  var f1 = BY + BH * 0.17, f2 = BY + BH * 0.5, f3 = BY + BH * 0.83;
+  [[1, 0], [-1, Math.PI]].forEach(function (fc) {                    // front (+z) and back (-z)
+    var s = fc[0], ry = fc[1], z = s * (fz + 0.02);
+    // ground floor: two small windows
+    windowAt(-0.85, f1 + 0.08, 0.36, 0.36, z, ry, false);
+    windowAt(0.85, f1 + 0.08, 0.36, 0.36, z, ry, false);
+    // first floor: wide carved window, flanked by two small ones
+    windowAt(0, f2, 1.15, 0.6, z, ry, true);
+    windowAt(-0.95, f2, 0.34, 0.4, z, ry, false);
+    windowAt(0.95, f2, 0.34, 0.4, z, ry, false);
+    // top floor: three-part window
+    [-0.7, 0, 0.7].forEach(function (x) { windowAt(x, f3, 0.42, 0.44, z, ry, true); });
+  });
+  // the door (front only): timber double door with a gold bar
+  (function () {
+    var door = new THREE.Group();
+    var frame = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.78, 0.09), woodMat);
+    var leaf = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.68), new THREE.MeshStandardMaterial({ color: 0x321b0f, roughness: 0.8 }));
+    leaf.position.z = 0.05;
+    var bar = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.025, 0.02), goldMat);
+    bar.position.set(0, 0.0, 0.06);
+    door.add(frame); door.add(leaf); door.add(bar);
+    door.position.set(0, BY + 0.39, fz + 0.02);
+    house.add(door);
+  })();
+  // small side windows
+  [-1, 1].forEach(function (sx) {
+    [f2, f3].forEach(function (y) { windowAt(sx * (BW / 2 + 0.02), y, 0.44, 0.46, 0, sx * Math.PI / 2, true); });
+  });
+
+  // ---------- roof: tiled hip roof with a wide overhang, supported by carved struts ----------
+  function hipRoof(hw, hd, h) {
+    var geo = new THREE.ConeGeometry(1, h, 4, 1, true);
+    geo.rotateY(Math.PI / 4);
+    geo.scale(hw / 0.7071, 1, hd / 0.7071);
+    var t = tileTex.clone(); t.needsUpdate = true; t.repeat.set(4, 2.4);
+    var m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: t, roughness: 0.75, side: THREE.DoubleSide }));
     return m;
   }
-  function beginMove(m, dur) {
-    var list = cubies.filter(function (c) { return Math.abs(c.position[m.axis] - m.layer) < 0.1; });
-    list.forEach(function (c) { turner.attach(c); });
-    move = { m: m, list: list, t: 0, dur: dur };
-  }
-  function finishMove() {
-    turner.rotation.set(0, 0, 0);
-    move.list.forEach(function (c) {
-      cube.attach(c);
-      c.position.set(Math.round(c.position.x), Math.round(c.position.y), Math.round(c.position.z));
-      // snap the orientation to whole quarter turns so error never builds up
-      var e = new THREE.Euler().setFromQuaternion(c.quaternion);
-      var q = Math.PI / 2;
-      c.quaternion.setFromEuler(new THREE.Euler(Math.round(e.x / q) * q, Math.round(e.y / q) * q, Math.round(e.z / q) * q));
-    });
-    move = null;
-  }
-  function ease(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+  var roof = hipRoof(BW / 2 + 0.55, BD / 2 + 0.5, 1.5);
+  roof.position.y = topY + 0.75 + 0.02;
+  house.add(roof);
+  // eave rim
+  var eave = new THREE.Mesh(new THREE.BoxGeometry(BW + 1.1, 0.07, BD + 1.0), woodMat);
+  eave.position.y = topY + 0.02;
+  house.add(eave);
 
-  function updateTurns(dt) {
-    if (move) {
-      move.t += dt;
-      var k = Math.min(1, move.t / move.dur);
-      turner.rotation.set(0, 0, 0);
-      turner.rotation[move.m.axis] = ease(k) * move.m.dir * Math.PI / 2;
-      if (k >= 1) finishMove();
-      return;
-    }
-    if (phase === "pause") {
-      pauseLeft -= dt;
-      if (pauseLeft <= 0) { phase = "scramble"; scrambleLeft = 14; }
-    } else if (phase === "scramble") {
-      if (scrambleLeft-- > 0) {
-        var m = randomMove(history[history.length - 1]);
-        history.push(m);
-        beginMove(m, 0.42);
-      } else { phase = "hold"; pauseLeft = 1.1; }
-    } else if (phase === "hold") {
-      pauseLeft -= dt;
-      if (pauseLeft <= 0) phase = "solve";
-    } else if (phase === "solve") {
-      if (history.length) {
-        var last = history.pop();
-        beginMove({ axis: last.axis, layer: last.layer, dir: -last.dir }, 0.34);   // undo the last move
-      } else { phase = "pause"; pauseLeft = 2.2; }
-    }
+  // struts under the eaves (the carved timber brackets, tundal)
+  function strut(x, z, dx, dz) {
+    var len = 0.62;
+    var s = new THREE.Mesh(new THREE.BoxGeometry(0.07, len, 0.07), darkMat);
+    s.position.set(x + dx * 0.25, topY - 0.22, z + dz * 0.25);
+    s.rotation.z = -dx * 0.8; s.rotation.x = dz * 0.8;
+    house.add(s);
   }
+  for (var sx = -1.0; sx <= 1.01; sx += 0.5) { strut(sx, fz + 0.02, 0, 1); strut(sx, -fz - 0.02, 0, -1); }
+  for (var sz = -0.6; sz <= 0.61; sz += 0.4) { strut(BW / 2 + 0.02, sz, 1, 0); strut(-BW / 2 - 0.02, sz, -1, 0); }
+
+  // lower canopy over the ground floor on the front, like the small eave on the traditional houses
+  (function () {
+    var t = tileTex.clone(); t.needsUpdate = true; t.repeat.set(2.6, 0.5);
+    var c = new THREE.Mesh(new THREE.BoxGeometry(BW + 0.35, 0.05, 0.62), new THREE.MeshStandardMaterial({ map: t, roughness: 0.75 }));
+    c.position.set(0, BY + BH / 3 + 0.04, fz + 0.28);
+    c.rotation.x = 0.28;
+    house.add(c);
+    for (var x = -1.0; x <= 1.01; x += 0.5) {
+      var s = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.42, 0.05), darkMat);
+      s.position.set(x, BY + BH / 3 - 0.12, fz + 0.2);
+      s.rotation.x = 0.75; house.add(s);
+    }
+  })();
+
+  // golden finial (gajur) on the ridge
+  (function () {
+    var y0 = topY + 1.5 + 0.02;
+    var stem = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.07, 0.3, 14), goldMat);
+    stem.position.y = y0 + 0.1; house.add(stem);
+    var ball = new THREE.Mesh(new THREE.SphereGeometry(0.1, 20, 16), goldMat);
+    ball.position.y = y0 + 0.3; house.add(ball);
+    var spire = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.28, 14), goldMat);
+    spire.position.y = y0 + 0.52; house.add(spire);
+  })();
+
+  // ground disc and a soft shadow
+  var ground = new THREE.Mesh(new THREE.CylinderGeometry(2.7, 2.8, 0.1, 64), new THREE.MeshStandardMaterial({ color: 0x2c2a27, roughness: 1 }));
+  ground.position.y = -0.05; house.add(ground);
+  var shTex = canvasTex(128, 128, function (g, w, h) {
+    var gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+    gr.addColorStop(0, "rgba(0,0,0,.6)"); gr.addColorStop(0.65, "rgba(0,0,0,.2)"); gr.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  });
+  var shadow = new THREE.Mesh(new THREE.PlaneGeometry(7.2, 7.2), new THREE.MeshBasicMaterial({ map: shTex, transparent: true, depthWrite: false }));
+  shadow.rotation.x = -Math.PI / 2; shadow.position.y = -0.11;
+  scene.add(shadow);
+
+  house.position.y = -1.55;
+  shadow.position.y = house.position.y - 0.11;
+  house.scale.setScalar(0.98);
 
   // ---------- sizing ----------
   function resize() {
@@ -148,24 +262,20 @@
   resize();
   window.addEventListener("resize", resize);
 
-  // ---------- render: runs on its own, ignores the pointer ----------
+  // ---------- render: turns on its own, ignores the pointer ----------
   var clock = new THREE.Clock();
   var visible = true, raf = 0, time = 0;
 
   function frame(dt) {
     time += dt;
-    cube.rotation.y = reduceMotion ? 0.7 : time * 0.38;
-    cube.rotation.x = reduceMotion ? 0.5 : 0.5 + Math.sin(time * 0.27) * 0.22;
-    cube.rotation.z = reduceMotion ? 0 : Math.sin(time * 0.19) * 0.08;
-    if (!reduceMotion) updateTurns(dt);
+    house.rotation.y = reduceMotion ? 0.55 : 0.55 + time * 0.3;
     renderer.render(scene, camera);
   }
 
   function loop() {
-    raf = 0;
+    raf = requestAnimationFrame(loop);
     if (!visible) return;
     frame(Math.min(clock.getDelta(), 0.05));
-    raf = requestAnimationFrame(loop);
   }
 
   if (reduceMotion) {
@@ -174,7 +284,7 @@
     if ("IntersectionObserver" in window) {
       new IntersectionObserver(function (entries) {
         visible = entries[0].isIntersecting;
-        if (visible && !raf) { clock.getDelta(); raf = requestAnimationFrame(loop); }
+        if (visible) clock.getDelta();
       }).observe(wrap);
     }
     raf = requestAnimationFrame(loop);
