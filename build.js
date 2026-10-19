@@ -40,7 +40,7 @@ const NAV = [
 ];
 
 const STATIC_FILES = [
-  'styles.css', 'script.js', 'hero3d.js', 'favicon.ico', 'favicon.svg',
+  'styles.css', 'script.js', 'favicon.ico', 'favicon.svg',
   'apple-touch-icon.png', 'icon-192.png', 'icon-512.png', 'logo.svg',
   'site.webmanifest', 'robots.txt', 'CNAME'
 ];
@@ -135,9 +135,7 @@ function build() {
     const fullTitle = meta.fullTitle || (isHome ? meta.title : meta.title + ' · Abhisan Ghimire');
     const wantsHero = meta.hero === 'true';
 
-    const scripts = (wantsHero
-      ? '<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>\n<script src="/data/globe-data.js?v=' + VERSION + '"></script>\n<script src="/hero3d.js?v=' + VERSION + '"></script>\n'
-      : '') + '<script src="/script.js?v=' + VERSION + '"></script>';
+    const scripts = '<script src="/script.js?v=' + VERSION + '"></script>';
 
     const html = fill(layout, {
       fullTitle,
