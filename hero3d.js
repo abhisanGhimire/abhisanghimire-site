@@ -16,7 +16,7 @@
 
   var scene = new THREE.Scene();
   var camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
-  camera.position.set(0, 3.0, 11.6);
+  camera.position.set(0, 2.6, 12.4);
   camera.lookAt(0, 0.9, 0);
 
   var renderer;
@@ -119,7 +119,7 @@
   step2.position.set(0, 0.09, 1.32); house.add(step2);
 
   // ---------- brick walls ----------
-  var BW = 2.5, BD = 2.0, BH = 2.3, BY = 0.18;
+  var BW = 2.5, BD = 2.0, BH = 2.6, BY = 0.18;
   function brickMat(rx, ry) {
     var t = brickTex.clone(); t.needsUpdate = true; t.repeat.set(rx, ry);
     return new THREE.MeshStandardMaterial({ map: t, roughness: 0.92 });
@@ -131,7 +131,7 @@
   var topY = BY + BH, fz = BD / 2;
 
   // timber beams marking the floors
-  [BY + BH / 3, BY + 2 * BH / 3].forEach(function (y) {
+  [BY + BH * 0.42, BY + BH * 0.74].forEach(function (y) {
     var beam = new THREE.Mesh(new THREE.BoxGeometry(BW + 0.06, 0.07, BD + 0.06), woodMat);
     beam.position.y = y; house.add(beam);
   });
@@ -152,12 +152,12 @@
     g.position.set(x, y, z); g.rotation.y = ry;
     house.add(g);
   }
-  var f1 = BY + BH * 0.17, f2 = BY + BH * 0.5, f3 = BY + BH * 0.83;
+  var f1 = BY + 0.34, f2 = BY + BH * 0.6, f3 = BY + BH * 0.87;
   [[1, 0], [-1, Math.PI]].forEach(function (fc) {                    // front (+z) and back (-z)
     var s = fc[0], ry = fc[1], z = s * (fz + 0.02);
     // ground floor: two small windows
-    windowAt(-0.85, f1 + 0.08, 0.36, 0.36, z, ry, false);
-    windowAt(0.85, f1 + 0.08, 0.36, 0.36, z, ry, false);
+    windowAt(-0.85, f1, 0.34, 0.34, z, ry, false);
+    windowAt(0.85, f1, 0.34, 0.34, z, ry, false);
     // first floor: wide carved window, flanked by two small ones
     windowAt(0, f2, 1.15, 0.6, z, ry, true);
     windowAt(-0.95, f2, 0.34, 0.4, z, ry, false);
@@ -168,15 +168,15 @@
   // the door (front only): timber double door with a gold bar
   (function () {
     var door = new THREE.Group();
-    var frame = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.78, 0.09), woodMat);
-    var leaf = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.68), new THREE.MeshStandardMaterial({ color: 0x321b0f, roughness: 0.8 }));
+    var frame = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.7, 0.09), woodMat);
+    var leaf = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.6), new THREE.MeshStandardMaterial({ color: 0x321b0f, roughness: 0.8 }));
     leaf.position.z = 0.05;
     var bar = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.025, 0.02), goldMat);
     bar.position.set(0, 0.0, 0.06);
     door.add(frame); door.add(leaf); door.add(bar);
-    door.position.set(0, BY + 0.39, fz + 0.02);
+    door.position.set(0, BY + 0.35, fz + 0.02);
     house.add(door);
-  })();
+})();
   // small side windows
   [-1, 1].forEach(function (sx) {
     [f2, f3].forEach(function (y) { windowAt(sx * (BW / 2 + 0.02), y, 0.44, 0.46, 0, sx * Math.PI / 2, true); });
@@ -210,19 +210,61 @@
   for (var sx = -1.0; sx <= 1.01; sx += 0.5) { strut(sx, fz + 0.02, 0, 1); strut(sx, -fz - 0.02, 0, -1); }
   for (var sz = -0.6; sz <= 0.61; sz += 0.4) { strut(BW / 2 + 0.02, sz, 1, 0); strut(-BW / 2 - 0.02, sz, -1, 0); }
 
-  // lower canopy over the ground floor on the front, like the small eave on the traditional houses
+  // lower roof tier: a tiled skirt around all four sides, between the ground and first floor
   (function () {
-    var t = tileTex.clone(); t.needsUpdate = true; t.repeat.set(2.6, 0.5);
-    var c = new THREE.Mesh(new THREE.BoxGeometry(BW + 0.35, 0.05, 0.62), new THREE.MeshStandardMaterial({ map: t, roughness: 0.75 }));
-    c.position.set(0, BY + BH / 3 + 0.04, fz + 0.28);
-    c.rotation.x = 0.28;
-    house.add(c);
-    for (var x = -1.0; x <= 1.01; x += 0.5) {
-      var s = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.42, 0.05), darkMat);
-      s.position.set(x, BY + BH / 3 - 0.12, fz + 0.2);
-      s.rotation.x = 0.75; house.add(s);
-    }
+    var y1 = BY + BH * 0.42, y0 = y1 - 0.4;
+    var tx = BW / 2 + 0.04, tz = BD / 2 + 0.04, bx = tx + 0.62, bz = tz + 0.62;
+    var P = [
+      [-tx, y1, tz], [tx, y1, tz], [tx, y1, -tz], [-tx, y1, -tz],
+      [-bx, y0, bz], [bx, y0, bz], [bx, y0, -bz], [-bx, y0, -bz]
+    ];
+    var quads = [[0, 1, 5, 4, BW], [1, 2, 6, 5, BD], [2, 3, 7, 6, BW], [3, 0, 4, 7, BD]];
+    var pos = [], uv = [], idx = [], v = 0;
+    quads.forEach(function (q) {
+      var a = P[q[0]], b = P[q[1]], c = P[q[2]], d = P[q[3]], rep = q[4] * 1.1;
+      [a, b, c, d].forEach(function (p) { pos.push(p[0], p[1], p[2]); });
+      uv.push(0, 1, rep, 1, rep, 0, 0, 0);
+      idx.push(v, v + 2, v + 1, v, v + 3, v + 2);
+      v += 4;
+    });
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+    geo.setIndex(idx);
+    geo.computeVertexNormals();
+    var t = tileTex.clone(); t.needsUpdate = true; t.repeat.set(1, 1.3);
+    house.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: t, roughness: 0.75, side: THREE.DoubleSide })));
+    // wooden rim and carved struts holding the skirt
+    var rim = new THREE.Mesh(new THREE.BoxGeometry(bx * 2, 0.06, bz * 2), woodMat);
+    rim.position.y = y0 - 0.03;
+    var rimInner = new THREE.Mesh(new THREE.BoxGeometry(bx * 2 - 0.1, 0.07, bz * 2 - 0.1), new THREE.MeshStandardMaterial({ color: 0x2b170d, roughness: 0.9 }));
+    rimInner.position.y = y0 - 0.032;
+    house.add(rimInner);
+    var fr = [[ 1, 0], [-1, 0], [0, 1], [0, -1]];
+    var xs = [-0.9, -0.45, 0, 0.45, 0.9];
+    xs.forEach(function (x) {
+      [[x, tz + 0.02, 0, 1], [x, -tz - 0.02, 0, -1]].forEach(function (a) {
+        var st = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.44, 0.05), darkMat);
+        st.position.set(a[0], y0 - 0.1, a[1] + a[3] * 0.2); st.rotation.x = a[3] * 0.75; house.add(st);
+      });
+    });
+    [-0.5, 0, 0.5].forEach(function (z) {
+      [[tx + 0.02, z, 1], [-tx - 0.02, z, -1]].forEach(function (a) {
+        var st = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.44, 0.05), darkMat);
+        st.position.set(a[0] + a[2] * 0.2, y0 - 0.1, a[1]); st.rotation.z = -a[2] * 0.75; house.add(st);
+      });
+    });
+    // little golden ornaments on the skirt corners
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) {
+      var o = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.16, 10), goldMat);
+      o.position.set(c[0] * bx, y0 + 0.07, c[1] * bz); house.add(o);
+    });
   })();
+
+  [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) {
+    var o = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.2, 10), goldMat);
+    o.position.set(c[0] * (BW / 2 + 0.52), topY + 0.12, c[1] * (BD / 2 + 0.47)); house.add(o);
+  });
 
   // golden finial (gajur) on the ridge
   (function () {
@@ -247,9 +289,9 @@
   shadow.rotation.x = -Math.PI / 2; shadow.position.y = -0.11;
   scene.add(shadow);
 
-  house.position.y = -1.55;
+  house.position.y = -1.95;
   shadow.position.y = house.position.y - 0.11;
-  house.scale.setScalar(0.98);
+  house.scale.setScalar(0.9);
 
   // ---------- sizing ----------
   function resize() {
@@ -268,7 +310,8 @@
 
   function frame(dt) {
     time += dt;
-    house.rotation.y = reduceMotion ? 0.55 : 0.55 + time * 0.3;
+    house.rotation.y = reduceMotion ? 0.12 : Math.sin(time * 0.45) * 0.42 + 0.06;
+    house.rotation.x = reduceMotion ? 0 : Math.sin(time * 0.31) * 0.02;
     renderer.render(scene, camera);
   }
 
