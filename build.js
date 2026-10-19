@@ -42,7 +42,7 @@ const NAV = [
 const STATIC_FILES = [
   'styles.css', 'script.js', 'favicon.ico', 'favicon.svg',
   'apple-touch-icon.png', 'icon-192.png', 'icon-512.png', 'logo.svg',
-  'site.webmanifest', 'robots.txt', 'CNAME'
+  'site.webmanifest', 'robots.txt', 'CNAME', '0a421855f1b0934c703567e8aa9223dd.txt'
 ];
 const STATIC_DIRS = ['assets', 'data'];
 
@@ -91,25 +91,78 @@ function parsePage(file) {
   return { meta, body: m[2] };
 }
 
-const PERSON_JSONLD = [
-  '<script type="application/ld+json">',
-  JSON.stringify({
-    '@context': 'https://schema.org',
-    '@type': 'Person',
-    name: 'Abhisan Ghimire',
-    url: SITE + '/',
-    image: SITE + '/assets/abhisan-ghimire.jpg',
-    jobTitle: 'Computer Scientist / Software Engineer',
-    alumniOf: { '@type': 'CollegeOrUniversity', name: 'Clark University' },
-    sameAs: [
-      'https://github.com/abhisanGhimire',
-      'https://www.linkedin.com/in/abhisanghimire',
-      'https://scholar.google.com/citations?user=QN9KC3G-c8gC&hl=en',
-      'https://pypi.org/user/Invictus/'
-    ]
-  }, null, 2),
-  '</script>'
-].join('\n');
+const PERSON_ID = SITE + '/#person';
+const SITE_ID = SITE + '/#website';
+const PERSON = {
+  '@type': 'Person',
+  '@id': PERSON_ID,
+  name: 'Abhisan Ghimire',
+  givenName: 'Abhisan',
+  familyName: 'Ghimire',
+  alternateName: ['Abhisan', 'A. Ghimire', 'Ghimire Abhisan'],
+  url: SITE + '/',
+  image: { '@type': 'ImageObject', url: SITE + '/assets/abhisan-ghimire.jpg', width: 400, height: 400 },
+  jobTitle: 'Computer Scientist / Software Engineer',
+  description: 'Abhisan Ghimire is a software engineer, educator and computer science researcher (M.S., Clark University) working on human-computer interaction, learning environment design and computational social science.',
+  knowsAbout: ['Human-computer interaction', 'Learning environment design', 'Educational technology', 'Computational social science', 'Software engineering', 'Machine learning', 'GIS systems', 'STEM education', 'Python'],
+  alumniOf: [
+    { '@type': 'CollegeOrUniversity', name: 'Clark University' },
+    { '@type': 'CollegeOrUniversity', name: 'Dr. Ambedkar Institute of Technology' }
+  ],
+  sameAs: [
+    'https://github.com/abhisanGhimire',
+    'https://www.linkedin.com/in/abhisanghimire',
+    'https://scholar.google.com/citations?user=QN9KC3G-c8gC&hl=en',
+    'https://pypi.org/user/Invictus/'
+  ]
+};
+const WEBSITE = {
+  '@type': 'WebSite',
+  '@id': SITE_ID,
+  url: SITE + '/',
+  name: 'Abhisan Ghimire',
+  alternateName: ['Abhisan Ghimire portfolio', 'abhisan.info'],
+  inLanguage: 'en',
+  publisher: { '@id': PERSON_ID }
+};
+const ARTICLES = [
+  { name: 'Social Determinants of Health and Fentanyl Overdose Mortality Across US Counties: An XGBoost and SHAP Analysis', url: 'https://arxiv.org/abs/2605.08230', date: '2026', authors: ['Kabi Raj Tiruwa', 'Abhisan Ghimire', 'Anuj Kumar Shah'] },
+  { name: 'Wearable-Grade Lead Reduction Disproportionately Degrades ECG AI Performance in Elderly Patients: Evidence from PTB-XL and MIT-BIH', url: 'https://doi.org/10.64898/2026.06.12.26355537', date: '2026-06', authors: ['Kabi Raj Tiruwa', 'Abhisan Ghimire'] },
+  { name: 'Understanding Hate Group Videos on YouTube', url: 'https://doi.org/10.1145/3500868.3559465', date: '2022-11', authors: null }
+];
+
+function buildJsonLd(meta, pagePath, fullTitle) {
+  if (pagePath === '/404.html') return '';
+  const graph = [];
+  const isHome = pagePath === '/';
+  const pageUrl = SITE + pagePath;
+  if (isHome) {
+    graph.push(WEBSITE, PERSON);
+    graph.push({ '@type': 'ProfilePage', '@id': pageUrl + '#profile', url: pageUrl, name: fullTitle, isPartOf: { '@id': SITE_ID }, mainEntity: { '@id': PERSON_ID }, inLanguage: 'en' });
+  } else {
+    graph.push({ '@type': pagePath === '/about/' ? 'AboutPage' : 'WebPage', '@id': pageUrl + '#page', url: pageUrl, name: fullTitle, description: meta.description || '', isPartOf: { '@id': SITE_ID }, about: { '@id': PERSON_ID }, inLanguage: 'en' });
+    graph.push({ '@id': PERSON_ID, '@type': 'Person', name: 'Abhisan Ghimire', url: SITE + '/' });
+    graph.push({
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: SITE + '/' },
+        { '@type': 'ListItem', position: 2, name: meta.title, item: pageUrl }
+      ]
+    });
+    if (pagePath === '/publications/') {
+      graph.push({
+        '@type': 'ItemList',
+        name: 'Publications and preprints by Abhisan Ghimire',
+        itemListElement: ARTICLES.map((a, i) => ({
+          '@type': 'ListItem', position: i + 1,
+          item: Object.assign({ '@type': 'ScholarlyArticle', headline: a.name, url: a.url, datePublished: a.date, author: { '@id': PERSON_ID } },
+            a.authors ? { author: a.authors.map((n) => (n === 'Abhisan Ghimire' ? { '@id': PERSON_ID } : { '@type': 'Person', name: n })) } : {})
+        }))
+      });
+    }
+  }
+  return '<script type="application/ld+json">\n' + JSON.stringify({ '@context': 'https://schema.org', '@graph': graph }, null, 2) + '\n</script>';
+}
 
 function fill(template, values) {
   return template
@@ -144,7 +197,7 @@ function build() {
       canonical: SITE + (is404 ? '/' : pagePath),
       version: VERSION,
       bodyClass: 'page-' + slug,
-      jsonld: meta.schema === 'person' ? PERSON_JSONLD : '',
+      jsonld: buildJsonLd(meta, pagePath, fullTitle),
       nav: renderNav(pagePath),
       content: body,
       scripts

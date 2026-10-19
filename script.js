@@ -369,3 +369,30 @@
       });
   }
 })();
+
+
+/* Analytics events: what visitors actually do (CV downloads, email, outbound links) */
+(function () {
+  function track(name, params) {
+    if (typeof window.gtag !== "function") return;
+    params = params || {};
+    params.transport_type = "beacon";
+    window.gtag("event", name, params);
+  }
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest && e.target.closest("a[href]");
+    if (!a) return;
+    var href = a.getAttribute("href") || "";
+    if (/^mailto:/i.test(href)) { track("contact_email_click", { link_url: href.replace(/^mailto:/i, "") }); return; }
+    if (/\.pdf(\?|$)/i.test(href)) { track("cv_download", { file_name: href.split("/").pop(), link_text: (a.textContent || "").trim().slice(0, 40) }); return; }
+    var url;
+    try { url = new URL(a.href, location.href); } catch (err) { return; }
+    if (url.hostname && url.hostname !== location.hostname) {
+      var host = url.hostname.replace(/^www\./, "");
+      track("outbound_click", { link_domain: host, link_url: url.href.slice(0, 200) });
+      if (/linkedin\.com$/.test(host)) track("contact_linkedin_click");
+      else if (/github\.com$/.test(host)) track("github_click", { link_url: url.href.slice(0, 200) });
+      else if (/scholar\.google\./.test(host)) track("scholar_click");
+    }
+  }, { passive: true });
+})();
